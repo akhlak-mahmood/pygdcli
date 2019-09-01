@@ -104,7 +104,7 @@ def _formatted(*text):
         args = []
         for i in range(len(text) - 1):
             args.append(text[i+1].__str__())
-        print("fmt:", fmt, "args:", args)
+
         if "{" in fmt and "}" in fmt:
             return fmt.format(*args)
         else:
