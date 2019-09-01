@@ -108,7 +108,7 @@ def _formatted(*text):
         if "{" in fmt and "}" in fmt:
             return fmt.format(*args)
         else:
-            return fmt + " " + " ".join(args)
+            return fmt + " ".join(args)
 
 def trace(*text):
     _log(DEBUG, _formatted(*text))
