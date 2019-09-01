@@ -14,4 +14,4 @@ except:
     raise
 
 from gdclient import cliclient
-cliclient.handle_command(sys.argv)
+cliclient.handle_command(sys.argv[1:])
