@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+# pass commdand line items into main cli-client
+# check for basic sanity and requirements
+
+import sys
+
+try:
+    import google-api-python-client
+    import google-auth-httplib2
+    import google-auth-oauthlib
+except:
+    print("Failed to import Google Drive API libraries.")
+    raise
+
+from gdclient import cliclient
+cliclient.handle_command(sys.argv)
