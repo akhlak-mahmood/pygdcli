@@ -20,6 +20,8 @@ def set_scopes(scope_items):
 
     log.trace("Set new scopes ", _scopes)
 
+def update_scopes(scope_items):
+    set_scopes(scope_items)
     # if scope is changed, re-authentication needed
     if os.path.isfile(_token_pickle):
         os.remove(_token_pickle)
