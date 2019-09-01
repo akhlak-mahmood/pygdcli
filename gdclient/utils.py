@@ -55,3 +55,63 @@ class AttrDict(dict):
     def save(self, json_file):
         self.save_json(json_file)
 
+
+
+def interactive(handler=None):
+    import os
+    import sys
+    import traceback
+    try:
+        import readline
+        readline.read_history_file('.pyhist')
+    except:
+        pass
+
+    while True:
+        cmd = input(">> ")
+        if cmd.strip() in ["exit", "close", "quit", "shutdown", "exit()", "quit()", "shutdown()"]:
+            break
+
+        if cmd.strip() in ["cls", "CLS", "clscr", "clear"]:
+            os.system("clear")
+            continue
+
+        cmd = cmd.strip()
+
+        # if a command handler is specfied and it handled it, we are good
+        if handler:
+            try:
+                if handler(cmd):
+                    continue
+            except Exception:
+                print()
+                traceback.print_exc(file=sys.stdout)
+                print()
+                continue
+
+        # otherwise try pure python
+        try:
+            exec(cmd, globals())
+
+        except (KeyboardInterrupt, SystemExit):
+            print("[Keyboard Interrupt]")
+            break
+
+        except Exception:
+            print()
+            traceback.print_exc(file=sys.stdout)
+            print()
+
+def _do_cmp(f1, f2):
+    bufsize = 1048576
+    if os.path.getsize(f1) != os.path.getsize(f2):
+        return False
+    with open(f1, 'rb') as fp1, open(f2, 'rb') as fp2:
+        while True:
+            b1 = fp1.read(bufsize)
+            b2 = fp2.read(bufsize)
+            if b1 != b2:
+                return False
+            if not b1:
+                return True
+
