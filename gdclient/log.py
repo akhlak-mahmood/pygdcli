@@ -3,8 +3,8 @@ import os
 
 from datetime import datetime, date, time
 
-DEBUG = 'DEBUG'
-INFO = 'INFO'
+DEBUG = 'Trace'
+INFO = 'Info'
 WARNING = 'WARNING'
 ERROR = 'ERROR'
 CRITICAL = 'CRITICAL'
@@ -31,6 +31,9 @@ def _above_max_level(level):
 def set_max_level(threshold):
     global _max_level, _levels, _loggable_levels
     _max_level = threshold
+    if threshold not in _levels:
+        raise ValueError("Unrecognized max level")
+
     for i in range(len(_levels)):
         if _levels[i] == _max_level:
             break
@@ -80,7 +83,7 @@ def _log(log_level, text):
         _write(_format.format(time=now.time(),
                     datetime=now,
                     date=date.today(),
-                    level=log_level.upper(),
+                    level=log_level,
                     text=text
             ))
 
@@ -89,7 +92,7 @@ def _new(text):
     now = datetime.now()
     _write("\n"+_format.format(time=now.time(), datetime=now,
                     date=date.today(),
-                    level=_max_level.upper(),
+                    level=_max_level,
                     text=text
             ))
 
@@ -113,7 +116,7 @@ if _max_level == None:
     set_max_level(INFO)
 
 if _format is None:
-    set_format('{datetime}: {level}: {text}')
+    set_format(' -- {text}')
 
 if _output is None:
     _output = sys.__stdout__
