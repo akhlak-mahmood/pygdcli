@@ -6,9 +6,9 @@
 import sys
 
 try:
-    import google-api-python-client
-    import google-auth-httplib2
-    import google-auth-oauthlib
+    import googleapiclient
+    import google_auth_oauthlib
+    import google.auth
 except:
     print("Failed to import Google Drive API libraries.")
     raise
