@@ -43,7 +43,7 @@ def set_max_level(threshold):
 def set_output(stream):
     global _output, _log_errors
 
-    if isinstance(_output, basestring):
+    if isinstance(_output, str):
         if not os.path.isdir(os.path.dirname(stream)):
             os.makedirs(os.path.dirname(stream))
 
@@ -96,20 +96,34 @@ def _new(text):
                     text=text
             ))
 
-def trace(text):
-    _log(DEBUG,text)
+def _formatted(*text):
+    if len(text) == 1:
+        return text[0]
+    else:
+        fmt = text[0]
+        args = []
+        for i in range(len(text) - 1):
+            args.append(text[i+1].__str__())
+        print("fmt:", fmt, "args:", args)
+        if "{" in fmt and "}" in fmt:
+            return fmt.format(*args)
+        else:
+            return fmt + " " + " ".join(args)
 
-def say(text):
-    _log(INFO,text)
+def trace(*text):
+    _log(DEBUG, _formatted(*text))
 
-def warn(text):
-    _log(WARNING,text)
+def say(*text):
+    _log(INFO, _formatted(*text))
 
-def error(text):
-    _log(ERROR,text)
+def warn(*text):
+    _log(WARNING, _formatted(*text))
 
-def critical(text):
-    _log(CRITICAL,text)
+def error(*text):
+    _log(ERROR, _formatted(*text))
+
+def critical(*text):
+    _log(CRITICAL, _formatted(*text))
 
 
 if _max_level == None:
