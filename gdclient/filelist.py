@@ -67,7 +67,7 @@ def change_directory(dirobj):
     return get_dir_items(dirobj)
 
 
-def download_file(fileobj):
+def download_file(fileobj, download_path=None):
     file_id = fileobj['id']
     request = auth.service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
