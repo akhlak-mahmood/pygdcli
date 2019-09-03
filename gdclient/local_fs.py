@@ -11,6 +11,9 @@ from . import log, auth, remote_fs
 from .filesystem import *
 
 class LinuxFS(FileSystem):
+    """ A linux specific file handler.
+        Can upload files to Google Drive. """
+
     def __init__(self, path):
         super().__init__()
         self.path = path
@@ -23,7 +26,7 @@ class LinuxFS(FileSystem):
         self.add_parent(os.path.dirname(self.path))
 
         if self.exists:
-            # this will also set _is_dir
+            # this will also set _is_dir, otherwise algorithm will fail
             self.guess_mimeType()
 
     def is_local(self):
@@ -34,6 +37,7 @@ class LinuxFS(FileSystem):
             return os.path.getsize(self.path)
 
     def md5(self):
+        """ Calculate md5 by chunk, should be okay with large files. """
         if self.is_dir():
             return None
 
@@ -45,13 +49,21 @@ class LinuxFS(FileSystem):
 
     def modifiedTime(self):
         if self.exists:
+            # get OS modified time
             t = os.path.getmtime(self.path)
+
+            # convert unix epoch time string to datetime
             dt = datetime.utcfromtimestamp(int(t))
+
+            # set utc timezone
             return pytz.UTC.localize(dt)
         else:
             return None
 
     def guess_mimeType(self):
+        """ Naive way to guess the mimetype, fails always other
+            than for some very common file types."""
+
         if not self.exists:
             raise RuntimeError("Not found ", self.path)
         if os.path.isdir(self.path):
@@ -66,6 +78,7 @@ class LinuxFS(FileSystem):
             self.mimeType = mmtype
 
     def list_dir(self):
+        """ Populate self.children list by reading current directory items. """
         if self.exists and self.is_dir():
             self.children = []
             for file in os.listdir(self.path):
@@ -75,6 +88,8 @@ class LinuxFS(FileSystem):
             log.warn("List directory failed: ", self.path)
 
     def gdrive_upload(self, remote_directory):
+        """ Upload a new file to G Drive. """
+
         if not self.exists:
             raise RuntimeError("Upload failed, not found.", self.path)
 
@@ -102,7 +117,7 @@ class LinuxFS(FileSystem):
             file = auth.service.files().create(
                     body = payload,
                     media_body = media,
-                    fields = FIELDS
+                    fields = FIELDS         # fields that will be returned in response json
                 )
 
             response = None
@@ -113,8 +128,13 @@ class LinuxFS(FileSystem):
                     log.say("Uploaded %d%%" %int(status.progress() * 100))
 
             if file:
+                # update the remote file properties with the response json
                 remote_file.set_object(response)
+
+                # set remote file as mirror of current file
                 self.set_mirror(remote_file)
+
+                # record sync time
                 self.syncTime = datetime.now()
                 remote_file.syncTime = self.syncTime
                 log.say("Upload successful: ", self.path)
@@ -132,6 +152,10 @@ class LinuxFS(FileSystem):
 
 
     def gdrive_update(self, remote_file):
+        """ Update an existing G Drive file with a local file.
+            @todo: update only bytes that changed.
+            """
+
         if not self.exists:
             raise RuntimeError("Update failed, not found.", self)
 
@@ -153,7 +177,7 @@ class LinuxFS(FileSystem):
                     fileId = remote_file.id,
                     body = payload,
                     media_body = media,
-                    fields = FIELDS
+                    fields = FIELDS         # fields that will be returned in response json
                 )
 
             response = None
@@ -164,10 +188,16 @@ class LinuxFS(FileSystem):
                     log.say("Uploaded %d%%" %int(status.progress() * 100))
 
             if file:
+                # update the remote file properties with the response json
                 remote_file.set_object(response)
+
+                # set remote file as mirror of current file
                 self.set_mirror(remote_file)
+
+                # record sync time
                 self.syncTime = datetime.now()
                 remote_file.syncTime = self.syncTime
+
                 log.say("Update successful: ", self.path)
                 return True
             else:

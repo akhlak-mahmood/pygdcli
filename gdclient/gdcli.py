@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import dateutil.parser
 
-from . import log, auth, utils, filesystem
+from . import log, auth, utils
 from .remote_fs import GDriveFS
 from .local_fs import LinuxFS
 
@@ -15,7 +15,11 @@ class PyGDCli:
         self.settings = None
         self.scopes = ["https://www.googleapis.com/auth/drive"]
         self.db = None
+
+        # local sync directory
         self.local_root = None
+
+        # remote sync directory, NOT the root of Google Drive
         self.remote_root = None
 
     def read_settings(self):
@@ -56,6 +60,7 @@ class PyGDCli:
         self.settings.save(self.settings_file)
 
     def load_db(self):
+        # read the database containing time, id, and mirror info
         if os.path.isfile(self.settings.db_file):
             self.db = utils.load_dict(self.settings.db_file)
 
@@ -69,27 +74,34 @@ class PyGDCli:
     def save_db(self):
         tree = {}
         if self.local_root:
+            # local objects
             tree.update(self.local_root.tree())
         if self.remote_root:
+            # remote objects
             tree.update(self.remote_root.tree())
         utils.save_dict(tree, self.settings.db_file)
 
     def setup_remote(self):
+        """ Pre login items """
         if not self.settings:
             raise ValueError("Settings not loaded.")
         auth.set_scopes(self.scopes)
 
     def login(self):
+        """ Get/update token, authenticate. """
         if not self.settings:
             raise ValueError("Settings not loaded.")
         auth.authenticate(self.settings.credentials_file, self.settings.token_pickle)
 
     def read_local_root(self):
+        """ Get the latest local sync directory (root) files info. """
+
         self.local_root = LinuxFS(self.settings.local_root_path)
         self.local_root.list_dir()
         self.local_root.print_children()
 
     def read_remote_root(self):
+        """ Get the latest remote sync directory (root) files info. """
         if not 'remote_root_id' in self.settings:
             self.remote_root = GDriveFS.directory_from_path(self.settings.remote_root_path)
             if self.remote_root:
@@ -106,6 +118,7 @@ class PyGDCli:
         self.remote_root.print_children()
 
     def restore_mirrors(self, local_dir, remote_dir):
+        """ Setup previously saved mirror links from database. """
         local_dir.set_mirror(remote_dir)
         for local_child in local_dir.children:
             if local_child.mirror is None:
@@ -126,12 +139,17 @@ class PyGDCli:
                             log.trace('Set mirror: ', remote_child.name, " <==> ", local_child.name)
 
     def setup_sync(self):
-        self.load_db()
+        """ Prepare and query both local and remote roots to get latest info. """
+        self.load_db() 
         self.read_local_root()
         self.read_remote_root()
         self.restore_mirrors(self.local_root, self.remote_root)
 
     def sync(self, item):
+        """ Sync the item with it's mirror file. 
+            Do extensive checking to modified time to determine sync direction.
+            If modification detected in both local and remote, abort syncing. """
+
         if isinstance(item, LinuxFS):
             localfile = item
             remotefile = item.mirror
@@ -226,25 +244,34 @@ class PyGDCli:
 
 
     def sync_root(self):
+        """ Check and run sync on both remote and local sync directories (roots). """
+
         if not self.local_root or not self.remote_root:
             raise RuntimeError("Root not set")
 
         change_detected = False
 
+        #@todo: iterate over local files and upload them
+
         # iterate over remote files
         for child in self.remote_root.children:
+            # no local mirror set, must be a new remote file
             if child.mirror is None:
                 change_detected = True
                 child.download_to_parent(self.local_root)
 
             else:
+                # local mirror set, it must have been linked before
+                # if local file is not downloaded yet, do it
                 if not child.mirror.exists:
                     change_detected = True
                     child.download_to_parent(self.local_root)
                 else:
+                    # local file exists, check if they are same
                     if not child.same_file():
                         change_detected = True
                         log.say("Not in sync: ", child.name, child.mirror.name)
+                        # sync child with it's mirror
                         self.sync(child)
 
         if not change_detected:

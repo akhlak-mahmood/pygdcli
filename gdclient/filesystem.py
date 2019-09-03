@@ -12,6 +12,9 @@ class MimeTypes:
 
 
 class FileSystem:
+    """ The base file system class to keep track of the common
+        properties of individual file items. """
+
     def __init__(self):
         self.name = None
         self.path = None
@@ -27,7 +30,8 @@ class FileSystem:
 
     def is_dir(self):
         if self._is_dir is None:
-            raise ValueError("Object type information not set. ", str(self))
+            # self._is_dir must be set for each item explicitely
+            raise ValueError("Object type information (file or directory) not set. ", str(self))
         return self._is_dir
 
     def is_file(self):
@@ -61,6 +65,7 @@ class FileSystem:
         return self.mimeType
 
     def add_parent(self, parent_id):
+        """ A file/dir can have more than one parent directory. """
         if self.parents is None:
             self.parents = []
 
@@ -70,6 +75,7 @@ class FileSystem:
         self.parents.append(parent_id)
 
     def set_mirror(self, FS_object):
+        """ Attach another file object as a mirror so we can sync them easily. """
         if not isinstance(FS_object, FileSystem):
             raise TypeError("Must be a FileSystem type object")
         self.mirror = FS_object
@@ -87,7 +93,7 @@ class FileSystem:
         if self.syncTime:
             syncTime = self.syncTime.strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
 
-        # items to save in json database
+        # items to save in json database or on print(self)
         items[self.id] = {
             "type":         self.__class__.__name__,
             "directory":    self.is_dir(),
@@ -118,6 +124,9 @@ class FileSystem:
 
 
     def tree(self):
+        """ Returns a dictionary containing all the basic properties of a
+            file, and recursively if it's a directory. Can be used to save
+            and load later. """
         items = self.__repr__()
 
         if self.is_dir():
@@ -127,6 +136,8 @@ class FileSystem:
         return items
 
     def same_file(self):
+        """ Compare a file with it's mirror file. """
+
         if self.is_dir():
             raise ValueError("Can not compare directory")
 
@@ -140,14 +151,18 @@ class FileSystem:
         if not size:
             raise RuntimeError("Failed to determine size")
 
+        # If size is not same, they can't be the same
         if size != self.mirror.size():
             return False
 
+        # Finally check md5 hash of the file contents
         md5 = self.md5()
         if not md5:
             raise RuntimeError("Failed to determine md5")
 
         if md5 != self.mirror.md5():
             return False
+
+        #@todo: add byte by byte comparison option if md5 not available
 
         return True
