@@ -15,6 +15,7 @@ class PyGDCli:
         self.settings = None
         self.scopes = ["https://www.googleapis.com/auth/drive"]
         self.db = None
+        self.objects = {}
 
         # local sync directory
         self.local_root = None
@@ -32,15 +33,17 @@ class PyGDCli:
         else:
             log.info("Not found ", self.settings_file)
 
+        os_home = str(Path.home())
+
         # save the default token file
         if not 'token_pickle' in self.settings:
-            os_home = str(Path.home())
             # self.settings.token_pickle = os.path.join(os_home, '.gdcli.token.pkl')
-            self.settings.token_pickle = os.path.join(os.getcwd(), 'token.pickle')
+            self.settings.token_pickle = 'token.pickle'
             log.trace("Set token file: ", self.settings.token_pickle)
 
         if not 'credentials_file' in self.settings:
             # we will move the default to os_home later
+            # self.settings.credentials_file = os.path.join(os_home, '.gdcli.credentials.json')
             self.settings.credentials_file = 'credentials.json'
             log.trace("Set credentials file: ", self.settings.credentials_file)
 
@@ -109,6 +112,7 @@ class PyGDCli:
     def read_remote_root(self):
         """ Get the latest remote sync directory (root) files info. """
         if not 'remote_root_id' in self.settings:
+            log.say("Trying to resolve remote root path ", self.settings.remote_root_path)
             self.remote_root = GDriveFS.directory_from_path(self.settings.remote_root_path)
             if self.remote_root:
                 self.settings.remote_root_id = self.remote_root.id
@@ -118,9 +122,13 @@ class PyGDCli:
                 exit(1)
         else:
             self.remote_root = GDriveFS()
+            # set the id of the remote sync directory and declare it a directory
             self.remote_root.set_id(self.settings.remote_root_id, True)
 
+        # recursively query remote directory file list
         self.remote_root.list_dir()
+
+        # print the root items only
         self.remote_root.print_children()
 
     def restore_mirrors(self, local_dir, remote_dir):
@@ -314,6 +322,8 @@ class PyGDCli:
         if not local_mirror_parent.exists:
             raise ValueError("Mirror parent does not exists.", local_mirror_parent)
 
+        log.say("Checking remote directory for changes: ", remote_directory.name)
+
         if remote_directory.mirror is None:
             # check the local file lists if same directory exists under mirror parent
             mirror = self._find_mirror_in_parent(remote_directory, local_mirror_parent)
@@ -372,7 +382,7 @@ class PyGDCli:
         if not remote_mirror_parent.exists:
             raise ValueError("Mirror parent does not exists.", remote_mirror_parent)
 
-        log.say("Checking directory for changes ", local_directory.path)
+        log.say("Checking local directory for changes: ", local_directory.path)
 
         # check if remote mirror directory exists, or create it
         if local_directory.mirror is None:
