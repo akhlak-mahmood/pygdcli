@@ -44,18 +44,27 @@ class AttrDict(dict):
                 json.dump(self, fp, indent=None, separators=(',', ':'))
             else:
                 json.dump(self, fp, indent=4)
-        print(" -- Write OK:", json_file)
 
     def load_json(self, json_file):
         with open(json_file, 'r') as fp:
             d = json.load(fp)
         self.__init__(d)
-        print(" -- Read OK:", json_file)
 
     def save(self, json_file):
         self.save_json(json_file)
 
 
+def save_dict(d, json_file, compressed=False):
+    with open(json_file, 'w+') as fp:
+        if compressed:
+            json.dump(d, fp, indent=None, separators=(',', ':'))
+        else:
+            json.dump(d, fp, indent=4)
+
+def load_dict(json_file):
+    with open(json_file, 'r') as fp:
+        d = json.load(fp)
+    return d
 
 def interactive(handler=None):
     import os

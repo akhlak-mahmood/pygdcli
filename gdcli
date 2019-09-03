@@ -15,5 +15,7 @@ except:
     print("Failed to import Google Drive API libraries.")
     raise
 
-from gdclient import cliclient
-cliclient.execute(os.getcwd(), sys.argv[1:])
+from gdclient import gdcli, cliclient
+
+# cliclient.execute(os.getcwd(), sys.argv[1:])
+gdcli.run()

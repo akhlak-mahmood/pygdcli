@@ -8,7 +8,6 @@ from . import log
 
 _scopes = ['https://www.googleapis.com/auth/drive.metadata.readonly']
 service = None 
-_token_pickle = 'token.pickle'
 
 def set_scopes(scope_items):
     global _scopes, _token_pickle
@@ -17,18 +16,17 @@ def set_scopes(scope_items):
         _scopes = [scope_items]
     else:
         _scopes = scope_items
-
     log.trace("Set new scopes ", _scopes)
 
-def update_scopes(scope_items):
+def update_scopes(scope_items, _token_pickle):
     set_scopes(scope_items)
     # if scope is changed, re-authentication needed
     if os.path.isfile(_token_pickle):
         os.remove(_token_pickle)
         log.trace("Remove ", _token_pickle)
 
-def authenticate():
-    global _scopes, _token_pickle, service
+def authenticate(credentials_file, _token_pickle):
+    global _scopes, service
 
     if len(_scopes) == 0:
         raise ValueError("Scopes not set, please set scopes first")
@@ -56,7 +54,7 @@ def authenticate():
             try:
                 log.trace("Creating flow object for login")
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', _scopes)
+                    credentials_file, _scopes)
             except:
                 log.critical("Failed flow object creation")
                 raise
