@@ -89,7 +89,7 @@ class LinuxFS(FileSystem):
                 log.warn("Failed mimetype detect: ", self.path)
             self.mimeType = mmtype
 
-    def list_dir(self):
+    def list_dir(self, recursive=False):
         """ Populate self.children list by reading current directory items. """
         if self.exists and self.is_dir():
             self.children = []
@@ -99,7 +99,7 @@ class LinuxFS(FileSystem):
                 self.children.append(child)
 
                 # recursively read child directories
-                if child.is_dir():
+                if recursive and child.is_dir():
                     child.list_dir()
         else:
             log.warn("List directory failed: ", self.path)

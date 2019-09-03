@@ -132,7 +132,7 @@ class GDriveFS(FileSystem):
             return None
 
 
-    def list_dir(self, nextPageToken=None):
+    def list_dir(self, nextPageToken=None, recursive=False):
         """ Populate the self.children items by sending an api request to GDrive. """
         if not self.id:
             raise RuntimeError("ID not set", self)
@@ -175,7 +175,7 @@ class GDriveFS(FileSystem):
             self.children.append(childObj)
 
             # recursively read child directories
-            if childObj.is_dir():
+            if recursive and childObj.is_dir():
                 childObj.list_dir()
 
         log.say("List directory OK")

@@ -106,7 +106,7 @@ class PyGDCli:
         """ Get the latest local sync directory (root) files info. """
 
         self.local_root = LinuxFS(self.settings.local_root_path)
-        self.local_root.list_dir()
+        self.local_root.list_dir(recursive=True)
         self.local_root.print_children()
 
     def read_remote_root(self):
@@ -126,7 +126,7 @@ class PyGDCli:
             self.remote_root.set_id(self.settings.remote_root_id, True)
 
         # recursively query remote directory file list
-        self.remote_root.list_dir()
+        self.remote_root.list_dir(recursive=True)
 
         # print the root items only
         self.remote_root.print_children()
