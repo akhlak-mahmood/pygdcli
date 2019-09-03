@@ -16,7 +16,7 @@ class LinuxFS(FileSystem):
 
     def __init__(self, path):
         super().__init__()
-        self.path = path
+        self.path = os.path.relpath(path)
 
         # for local fs, path is id
         self.id = self.path
@@ -35,6 +35,17 @@ class LinuxFS(FileSystem):
     def size(self):
         if self.exists and self.is_file():
             return os.path.getsize(self.path)
+
+    def create_dir(self):
+        # declare this as a directory
+        self._is_dir = True
+
+        if self.exists:
+            return
+        else:
+            os.mkdir(self.path)
+            self.exists = True
+            log.say("Created local directory: ", self.path)
 
     def md5(self):
         """ Calculate md5 by chunk, should be okay with large files. """
@@ -83,7 +94,12 @@ class LinuxFS(FileSystem):
             self.children = []
             for file in os.listdir(self.path):
                 full_path = os.path.join(self.path, file)
-                self.children.append(LinuxFS(full_path))
+                child = LinuxFS(full_path)
+                self.children.append(child)
+
+                # recursively read child directories
+                if child.is_dir():
+                    child.list_dir()
         else:
             log.warn("List directory failed: ", self.path)
 

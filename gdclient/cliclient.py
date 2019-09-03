@@ -69,8 +69,6 @@ def handle_command(command):
 def execute(pwd, args):
     log.trace("Processing arguments %s" % " ".join(args))
     check_valid_command(args)
-
     auth.set_scopes(settings.scopes)
     auth.authenticate()
-
     utils.interactive(handle_command)

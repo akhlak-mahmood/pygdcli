@@ -30,6 +30,38 @@ class GDriveFS(FileSystem):
     def is_local(self):
         return False
 
+    def create_dir(self):
+        # declare this as a directory
+        self._is_dir = True
+
+        if self.exists:
+            return True
+
+        if self.name is None:
+            raise ValueError("Name not set, can not create.", self)
+
+        if not self.parents or len(self.parents) == 0:
+            raise ValueError("Parent not set, can not create.", self)
+
+        # create directory file on gDrive
+        body = {
+          'name': self.name,
+          'mimeType': MimeTypes.gdrive_directory,
+          'parents': self.parents
+        }
+
+        response = auth.service.files().create(
+                        body = body,
+                        fields = FIELDS         # fields that will be returned in response json
+                    ).execute()
+
+        if response:
+            self.set_object(response)
+            self.exists = True
+            log.say("Created remote directory: ", self.name)
+        else:
+            raise RuntimeError("Failed to create remote directory.", response)
+
     def modifiedTime(self):
         if self.exists and self.is_file():
             # parse the RFC 3339 time as python datetime with utc timezone
@@ -59,6 +91,12 @@ class GDriveFS(FileSystem):
             set it's GDrive id. """
         self.id = x
         self.exists = True
+        self._is_dir = is_a_directory
+
+    def set_name(self, x, is_a_directory):
+        """ If the file/dir was initialized as an empty object,
+            set it's name. """
+        self.name = x
         self._is_dir = is_a_directory
 
     def _parse_object(self):
@@ -133,6 +171,10 @@ class GDriveFS(FileSystem):
             # determined from the path
             childObj.add_parent(self.id)
             self.children.append(childObj)
+
+            # recursively read child directories
+            if childObj.is_dir():
+                childObj.list_dir()
 
         log.say("List directory OK")
 

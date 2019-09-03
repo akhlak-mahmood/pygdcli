@@ -77,7 +77,11 @@ class FileSystem:
     def set_mirror(self, FS_object):
         """ Attach another file object as a mirror so we can sync them easily. """
         if not isinstance(FS_object, FileSystem):
-            raise TypeError("Must be a FileSystem type object")
+            raise TypeError("Must be a FileSystem type object to set mirror.")
+
+        if self.is_dir() != FS_object.is_dir():
+            raise TypeError("Can not set mirror between directory and file.", self, FS_object)
+
         self.mirror = FS_object
         FS_object.mirror = self
 

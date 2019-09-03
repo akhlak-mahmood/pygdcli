@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import dateutil.parser
 
-from . import log, auth, utils
+from . import log, auth, utils, filesystem
 from .remote_fs import GDriveFS
 from .local_fs import LinuxFS
 
@@ -64,12 +64,17 @@ class PyGDCli:
         if os.path.isfile(self.settings.db_file):
             self.db = utils.load_dict(self.settings.db_file)
 
-        for key in self.db:
-            if self.db[key]['modifiedTime']:
-                self.db[key]['modifiedTime'] = dateutil.parser.parse(self.db[key]['modifiedTime'])
+            for key in self.db:
+                if self.db[key]['modifiedTime']:
+                    self.db[key]['modifiedTime'] = dateutil.parser.parse(self.db[key]['modifiedTime'])
 
-            if self.db[key]['syncTime']:
-                self.db[key]['syncTime'] = dateutil.parser.parse(self.db[key]['syncTime'])
+                if self.db[key]['syncTime']:
+                    self.db[key]['syncTime'] = dateutil.parser.parse(self.db[key]['syncTime'])
+            log.say("Database loaded: ", self.settings.db_file)
+
+        else:
+            self.db = None
+            log.warn("No previously saved database found: ", self.settings.db_file)
 
     def save_db(self):
         tree = {}
@@ -80,6 +85,7 @@ class PyGDCli:
             # remote objects
             tree.update(self.remote_root.tree())
         utils.save_dict(tree, self.settings.db_file)
+        log.say("Saved database: ", self.settings.db_file)
 
     def setup_remote(self):
         """ Pre login items """
@@ -120,6 +126,10 @@ class PyGDCli:
     def restore_mirrors(self, local_dir, remote_dir):
         """ Setup previously saved mirror links from database. """
         local_dir.set_mirror(remote_dir)
+
+        if self.db is None:
+            return
+
         for local_child in local_dir.children:
             if local_child.mirror is None:
                 if local_child.id in self.db:
@@ -145,7 +155,7 @@ class PyGDCli:
         self.read_remote_root()
         self.restore_mirrors(self.local_root, self.remote_root)
 
-    def sync(self, item):
+    def sync_file(self, item):
         """ Sync the item with it's mirror file. 
             Do extensive checking to modified time to determine sync direction.
             If modification detected in both local and remote, abort syncing. """
@@ -166,22 +176,22 @@ class PyGDCli:
         rtime = remotefile.modifiedTime()
 
         local_db_modifiedTime = None
-        if localfile.id in self.db:
+        if self.db and localfile.id in self.db:
             if 'modifiedTime' in self.db[localfile.id]:
                 local_db_modifiedTime = self.db[localfile.id]['modifiedTime']
 
         local_db_syncTime = None
-        if localfile.id in self.db:
+        if self.db and localfile.id in self.db:
             if 'syncTime' in self.db[localfile.id]:
                 local_db_syncTime = self.db[localfile.id]['syncTime']
 
         remote_db_modifiedTime = None
-        if remotefile.id in self.db:
+        if self.db and remotefile.id in self.db:
             if 'modifiedTime' in self.db[remotefile.id]:
                 remote_db_modifiedTime = self.db[remotefile.id]['modifiedTime']
 
         remote_db_syncTime = None
-        if remotefile.id in self.db:
+        if self.db and remotefile.id in self.db:
             if 'syncTime' in self.db[remotefile.id]:
                 remote_db_syncTime = self.db[remotefile.id]['syncTime']
 
@@ -243,39 +253,174 @@ class PyGDCli:
             log.error("Can not determine the latest file, timestamp error", localfile, remotefile)
 
 
-    def sync_root(self):
+    def sync_roots(self):
         """ Check and run sync on both remote and local sync directories (roots). """
 
         if not self.local_root or not self.remote_root:
-            raise RuntimeError("Root not set")
+            raise RuntimeError("Roots not set.")
+
+        if not self.sync_dir(self.remote_root):
+            log.say("No change detected, files are in sync.")
+
+    def sync_dir(self, directory_object, parent_object=None):
+        """ Check and recursively run sync on a directory object. """
+
+        if not isinstance(directory_object, filesystem.FileSystem):
+            raise TypeError("Not a FileSystem object.", directory_object)
+
+        if not directory_object.is_dir():
+            raise ValueError("Can not sync a single file, need a directory.", directory_object)
+
+        if directory_object.mirror is None:
+            raise ValueError("No mirror set, sync will be one way only.", directory_object)
 
         change_detected = False
 
-        #@todo: iterate over local files and upload them
+        if directory_object.is_local():
+            if parent_object is None:
+                parent_object = self.remote_root
 
-        # iterate over remote files
-        for child in self.remote_root.children:
-            # no local mirror set, must be a new remote file
-            if child.mirror is None:
+            if self._upload_recursive(directory_object, parent_object):
                 change_detected = True
-                child.download_to_parent(self.local_root)
 
-            else:
-                # local mirror set, it must have been linked before
-                # if local file is not downloaded yet, do it
-                if not child.mirror.exists:
+            if self._download_recursive(directory_object.mirror, parent_object.mirror):
+                change_detected = True
+
+        else:
+            if parent_object is None:
+                parent_object = self.local_root
+
+            if self._download_recursive(directory_object, parent_object):
+                change_detected = True
+
+            if self._upload_recursive(directory_object.mirror, parent_object.mirror):
+                change_detected = True
+
+        return change_detected
+
+
+    def _find_mirror_in_parent(self, file, remote_parent):
+        # this will fail if folder has multiple files with the 
+        # same name
+        for child in remote_parent.children:
+            if file.name == child.name:
+                return child
+        return None
+
+    def _download_recursive(self, remote_directory, local_mirror_parent):
+
+        change_detected = False
+
+        if not local_mirror_parent.exists:
+            raise ValueError("Mirror parent does not exists.", local_mirror_parent)
+
+        if remote_directory.mirror is None:
+            # check the local file lists if same directory exists under mirror parent
+            mirror = self._find_mirror_in_parent(remote_directory, local_mirror_parent)
+            if mirror is None or not mirror.exists:
+                # create it
+                mirror = LinuxFS(os.path.join(local_mirror_parent.path, remote_directory.name))
+                mirror.add_parent(local_mirror_parent.id)
+                mirror.create_dir()
+
+            remote_directory.set_mirror(mirror)
+            change_detected = True
+
+        for remote_child in remote_directory.children:
+            if remote_child.is_dir():
+                # recursively download child directory
+                if self._download_recursive(remote_child, remote_directory):
                     change_detected = True
-                    child.download_to_parent(self.local_root)
-                else:
-                    # local file exists, check if they are same
-                    if not child.same_file():
-                        change_detected = True
-                        log.say("Not in sync: ", child.name, child.mirror.name)
-                        # sync child with it's mirror
-                        self.sync(child)
+            else:
+                sync = False
+                download = False
 
-        if not change_detected:
-            log.say("No change detected, files are in sync.")
+                # no local mirror set, either a new remote file or new database
+                if remote_child.mirror is None:
+                    # check if file with the same name exists in the mirror directory
+                    mirror = self._find_mirror_in_parent(remote_child, remote_directory.mirror)
+                    if mirror is None or not mirror.exists:
+                        download = True
+                    else:
+                        # it exists, check if contents are same
+                        remote_child.set_mirror(mirror)
+                        sync = True
+                else:
+                    # local mirror set, it must have been linked before
+                    # if local file is not downloaded yet, do it
+                    if not remote_child.mirror.exists:
+                        download = True
+                    else:
+                        sync = True
+
+                if download:
+                    log.say("Downloading file ", remote_child)
+                    change_detected = True
+                    remote_child.download_to_parent(remote_directory.mirror)
+                elif sync and not remote_child.same_file():
+                    log.say("Not in sync: ", remote_child.name, remote_child.mirror.name)
+                    change_detected = True
+                    self.sync_file(remote_child)
+
+        return change_detected
+
+
+    def _upload_recursive(self, local_directory, remote_mirror_parent):
+
+        change_detected = False
+
+        if not remote_mirror_parent.exists:
+            raise ValueError("Mirror parent does not exists.", remote_mirror_parent)
+
+        log.say("Checking directory for changes ", local_directory.path)
+
+        # check if remote mirror directory exists, or create it
+        if local_directory.mirror is None:
+            mirror = self._find_mirror_in_parent(local_directory, remote_mirror_parent)
+            if mirror is None or not mirror.exists:
+                mirror = GDriveFS()
+                mirror.add_parent(remote_mirror_parent.id)
+                mirror.create_dir()
+            local_directory.set_mirror(mirror)
+            change_detected = True
+
+        for local_child in local_directory.children:
+            if local_child.is_dir():
+                # recursively upload child directory
+                if self._upload_recursive(local_child, local_directory):
+                    change_detected = True
+            else:
+                sync = False
+                upload = False
+
+                # no info recorded in db, either a new file or new database
+                if local_child.mirror is None:
+                    # check if file with the same name exists in the mirror directory
+                    mirror = self._find_mirror_in_parent(local_child, local_directory.mirror)
+                    if mirror is None or not mirror.exists:
+                        upload = True
+                    else:
+                        # it exists, check if contents are same
+                        local_child.set_mirror(mirror)
+                        sync = True
+                else:
+                    # remote mirror set, it must have been linked before
+                    # if remote file is not uploaded yet, do it
+                    if not local_child.mirror.exists:
+                        upload = True
+                    else:
+                        sync = True
+
+                if upload:
+                    log.say("Uploading file ", local_child)
+                    change_detected = True
+                    local_child.gdrive_upload(local_directory.mirror)
+                elif sync and not local_child.same_file():
+                    log.say("Not in sync: ", local_child.name, local_child.mirror.name)
+                    change_detected = True
+                    self.sync_file(local_child)
+
+        return change_detected
 
 
 def run():
@@ -286,7 +431,7 @@ def run():
     app.login()
 
     app.setup_sync()
-    app.sync_root()
+    app.sync_roots()
 
     app.save_db()
 
