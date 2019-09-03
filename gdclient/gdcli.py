@@ -298,11 +298,17 @@ class PyGDCli:
             if parent_object is None:
                 parent_object = self.local_root
 
+            log.trace("Recursively checking ", directory_object)
             if self._download_recursive(directory_object, parent_object):
                 change_detected = True
+            else:
+                log.trace("No changes found for ", directory_object)
 
+            log.trace("Recursively checking ", directory_object.mirror)
             if self._upload_recursive(directory_object.mirror, parent_object.mirror):
                 change_detected = True
+            else:
+                log.trace("No changes found for ", directory_object.mirror)
 
         return change_detected
 
@@ -325,6 +331,7 @@ class PyGDCli:
         log.say("Checking remote directory for changes: ", remote_directory.name)
 
         if remote_directory.mirror is None:
+            log.trace("Local mirror not set: ", remote_directory.name)
             # check the local file lists if same directory exists under mirror parent
             mirror = self._find_mirror_in_parent(remote_directory, local_mirror_parent)
             if mirror is None or not mirror.exists:
@@ -334,7 +341,10 @@ class PyGDCli:
                 mirror.create_dir()
 
             remote_directory.set_mirror(mirror)
+            log.trace("Set mirror ", mirror, " <==> ", remote_directory.name)
             change_detected = True
+        else:
+            log.trace("Mirror OK: ", remote_directory.name, " <==> ", remote_directory.mirror.path)
 
         for remote_child in remote_directory.children:
             if remote_child.is_dir():

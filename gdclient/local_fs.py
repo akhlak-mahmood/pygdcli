@@ -41,6 +41,7 @@ class LinuxFS(FileSystem):
         self._is_dir = True
 
         if self.exists:
+            log.warn("Directory already exists: ", self)
             return
         else:
             os.mkdir(self.path)

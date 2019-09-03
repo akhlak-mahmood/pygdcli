@@ -35,6 +35,7 @@ class GDriveFS(FileSystem):
         self._is_dir = True
 
         if self.exists:
+            log.warn("Remote directory already exists: ", self)
             return True
 
         if self.name is None:
@@ -325,8 +326,9 @@ class GDriveFS(FileSystem):
                 log.warn("Specified path is a file, taking parent directory as the path ", gdrive_path)
                 break
 
-            log.trace("Resolved path: ", parent, dir_name)
+            log.trace("Resolving path: ", parent, dir_name)
             parent = directory
 
+        log.say("Resolved path OK: ", gdrive_path, " as ", parent.name)
         return parent
 
