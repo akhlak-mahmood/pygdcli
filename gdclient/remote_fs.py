@@ -104,12 +104,8 @@ class GDriveFS(FileSystem):
         if self.gdFileObject:
             # if has a valid id, it exists
             self.id = self._get_object_attr('id')
-            self.name = self._get_object_attr('name')
-            self._size = int(self._get_object_attr('size'))
-            self._modifiedTime = self._get_object_attr('modifiedTime')
-            self._md5 = self._get_object_attr('md5Checksum')
             self.exists = True
-
+            self.name = self._get_object_attr('name')
             self.mimeType = self._get_object_attr('mimeType')
 
             # it is necessary to set _is_dir property
@@ -117,6 +113,11 @@ class GDriveFS(FileSystem):
                 self._is_dir = True
             else:
                 self._is_dir = False
+
+            if self.is_file():
+                self._size = int(self._get_object_attr('size'))
+                self._modifiedTime = self._get_object_attr('modifiedTime')
+                self._md5 = self._get_object_attr('md5Checksum')
 
         else:
             self.exists = False
