@@ -108,6 +108,11 @@ class GDriveFS(FileSystem):
             self.exists = True
             self.name = self._get_object_attr('name')
             self.mimeType = self._get_object_attr('mimeType')
+            self._modifiedTime = self._get_object_attr('modifiedTime')
+
+            if self._get_object_attr('parents'):
+                for p in self._get_object_attr('parents'):
+                    self.add_parent(p)
 
             # it is necessary to set _is_dir property
             if self.mimeType == MimeTypes.gdrive_directory:
@@ -116,9 +121,11 @@ class GDriveFS(FileSystem):
                 self._is_dir = False
 
             if self.is_file():
-                self._size = int(self._get_object_attr('size'))
-                self._modifiedTime = self._get_object_attr('modifiedTime')
-                self._md5 = self._get_object_attr('md5Checksum')
+                try:
+                    self._size = int(self._get_object_attr('size'))
+                    self._md5 = self._get_object_attr('md5Checksum')
+                except:
+                    log.trace("Can not parse file properties: ", self)
 
         else:
             self.exists = False
@@ -332,3 +339,45 @@ class GDriveFS(FileSystem):
         log.say("Resolved path OK: ", gdrive_path, " as ", parent.name)
         return parent
 
+
+class GDChanges:
+    def __init__(self, last_poll_token=None):
+        self._changed_items = {}
+        if last_poll_token:
+            self.startPageToken = last_poll_token
+        else:
+            log.trace("Getting changes startPageToken")
+            response = auth.service.changes().getStartPageToken().execute()
+            self.startPageToken = response.get('startPageToken')
+            log.trace("Changes startPageToken OK")
+
+    def _retrieve_changes(self):
+        page_token = self.startPageToken
+
+        while page_token is not None:
+            response = auth.service.changes().list(
+                            pageToken=page_token,
+                            spaces='drive',
+                            fields=CHFIELDS
+                ).execute()
+            for change in response.get('changes'):
+                idn = change.get('file').get('id')
+                if idn is None:
+                    raise RuntimeError("Response file object doesn't have an ID.")
+                log.say('Change found for file: %s' % change.get('file').get('name'))
+                self._changed_items[idn] = GDriveFS()
+                self._changed_items[idn].set_object(change.get('file'))
+
+            if 'newStartPageToken' in response:
+                # Last page, save this token for the next polling interval
+                self.startPageToken = response.get('newStartPageToken')
+
+            page_token = response.get('nextPageToken')
+
+    def fetch(self):
+        self._changed_items = {}
+        self._retrieve_changes()
+        return self._changed_items
+
+    def last_poll_token(self):
+        return self.startPageToken

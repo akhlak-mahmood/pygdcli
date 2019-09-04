@@ -5,6 +5,7 @@ WRITE_CHUNK_SIZE = 131072
 
 FIELDS = "id,size,name,mimeType,modifiedTime,parents,md5Checksum"
 LSFIELDS = "nextPageToken, files(%s)" %FIELDS
+CHFIELDS = "nextPageToken,newStartPageToken,changes/file(%s)" %FIELDS
 
 class MimeTypes:
     linux_directory = 'inode/directory'

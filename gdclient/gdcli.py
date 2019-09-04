@@ -6,7 +6,7 @@ import dateutil.parser
 import pdb
 
 from . import log, auth, utils, filesystem
-from .remote_fs import GDriveFS
+from .remote_fs import GDriveFS, GDChanges
 from .local_fs import LinuxFS
 
 # Initialize
@@ -24,6 +24,7 @@ class PyGDCli:
 
         # remote sync directory, NOT the root of Google Drive
         self.remote_root = None
+        self.gd_change = None
 
     def read_settings(self):
         self.settings = utils.AttrDict()
@@ -81,7 +82,7 @@ class PyGDCli:
             self.db = None
             log.warn("No previously saved database found: ", self.settings.db_file)
 
-    def save_db(self):
+    def save_full_query_db(self):
         tree = {}
         if self.local_root:
             # local objects
@@ -89,6 +90,18 @@ class PyGDCli:
         if self.remote_root:
             # remote objects
             tree.update(self.remote_root.tree())
+        utils.save_dict(tree, self.settings.db_file)
+        log.say("Saved database: ", self.settings.db_file)
+
+    def save_db(self):
+        tree = self.db
+        for key in tree:
+            if tree[key].get('modifiedTime'):
+                tree[key]['modifiedTime'] = tree[key].get('modifiedTime').strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
+
+            if tree[key].get('syncTime'):
+                tree[key]['syncTime'] = tree[key].get('syncTime').strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
+
         utils.save_dict(tree, self.settings.db_file)
         log.say("Saved database: ", self.settings.db_file)
 
@@ -109,7 +122,6 @@ class PyGDCli:
 
         self.local_root = LinuxFS(self.settings.local_root_path)
         self.local_root.list_dir(recursive=True)
-        self.local_root.print_children()
 
     def read_remote_root(self):
         """ Get the latest remote sync directory (root) files info. """
@@ -160,12 +172,74 @@ class PyGDCli:
                             remote_child.set_mirror(local_child)
                             log.trace('Set mirror: ', remote_child.name, " <==> ", local_child.name)
 
-    def setup_sync(self):
-        """ Prepare and query both local and remote roots to get latest info. """
-        self.load_db() 
+    def sync(self):
+        self.load_db()
         self.read_local_root()
-        self.read_remote_root()
-        self.restore_mirrors(self.local_root, self.remote_root)
+
+        if not self.db:
+            log.say("No previous database saved, initiating full query.")
+            self.read_remote_root()
+            self.restore_mirrors(self.local_root, self.remote_root)
+            self.sync_roots()
+            self.save_full_query_db()
+        else:
+            log.say("Requesting remote for changes.")
+            gd_change = GDChanges(self.settings.get('lastChangeToken'))
+            changes = gd_change.fetch()
+            self.settings.lastChangeToken = gd_change.last_poll_token()
+            self.settings.save(self.settings_file)
+
+            if len(changes) == 0:
+                log.say("No remote change reported. All up to date.")
+
+            for fileId in changes:
+                remote_file = changes[fileId]
+                # see if any local file in db matches with the id
+                local_record = self._get_mirror_by_id(fileId)
+
+                if local_record is None:
+                    parent_id = remote_file.parents[0]
+                    local_parent_record = self._get_mirror_by_id(parent_id)
+                    if local_parent_record is None:
+                        # might be a file beyond our sync directory
+                        log.trace("Can not resolve path for ", remote_file)
+                    else:
+                        local_parent = self._get_by_id(local_parent_record.get('id'), self.local_root)
+                        if remote_file.is_dir():
+                            # create it
+                            mirror = LinuxFS(os.path.join(local_parent.path, remote_file.name))
+                            mirror.add_parent(local_parent.id)
+                            mirror.create_dir()
+                            local_parent.list_dir(recursive=False)
+                            remote_file.set_mirror(mirror)
+                        else:
+                            remote_file.download_to_parent(local_parent)
+
+                        self.db.update(local_parent.tree())
+                        self.db.update(remote_file.tree())
+
+                else:
+                    local_file = self._get_by_id(local_record.get('id'), self.local_root)
+                    local_file.set_mirror(remote_file)
+
+                    if remote_file.is_dir() and not local_file.exists:
+                        # create it
+                        mirror = LinuxFS(os.path.join(local_parent.path, remote_file.name))
+                        mirror.add_parent(local_parent.id)
+                        mirror.create_dir()
+                        remote_file.set_mirror(mirror)
+                    else:
+                        if local_file.exists and not local_file.same_file():
+                            self.sync(local_file)
+                        else:
+                            remote_file.download_to_local(local_file)
+
+                    self.db.update(local_file.tree())
+                    self.db.update(remote_file.tree())
+
+            self.save_db()
+    
+        log.say("Sync finished")
 
     def sync_file(self, item):
         """ Sync the item with it's mirror file. 
@@ -344,6 +418,13 @@ class PyGDCli:
                 return self._get_by_id(idx, child)
         return None
 
+    def _get_mirror_by_id(self, idx):
+        for record in self.db:
+            if self.db.get(record).get('mirror') == idx:
+                return record
+        return None
+
+
     def _download_recursive(self, remote_directory, local_mirror_parent):
 
         change_detected = False
@@ -472,9 +553,5 @@ def run(settings_file):
     app.read_settings()
     app.setup_remote()
     app.login()
-
-    app.setup_sync()
-    app.sync_roots()
-
-    app.save_db()
+    app.sync()
 
