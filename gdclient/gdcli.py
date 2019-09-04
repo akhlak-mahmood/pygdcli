@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 import dateutil.parser
 
+import pdb
+
 from . import log, auth, utils, filesystem
 from .remote_fs import GDriveFS
 from .local_fs import LinuxFS
@@ -132,7 +134,9 @@ class PyGDCli:
         self.remote_root.print_children()
 
     def restore_mirrors(self, local_dir, remote_dir):
-        """ Setup previously saved mirror links from database. """
+        """ Setup previously saved mirror links from database.
+            @todo: rewrite this
+        """
         local_dir.set_mirror(remote_dir)
 
         if self.db is None:
@@ -299,6 +303,7 @@ class PyGDCli:
                 parent_object = self.local_root
 
             log.trace("Recursively checking ", directory_object)
+            # pdb.set_trace()                                                 # < ========================================= pdb
             if self._download_recursive(directory_object, parent_object):
                 change_detected = True
             else:
@@ -341,7 +346,7 @@ class PyGDCli:
                 mirror.create_dir()
 
             remote_directory.set_mirror(mirror)
-            log.trace("Set mirror ", mirror, " <==> ", remote_directory.name)
+            log.trace("Set mirror ", mirror, " <==> ", remote_directory)
             change_detected = True
         else:
             log.trace("Mirror OK: ", remote_directory.name, " <==> ", remote_directory.mirror.path)
@@ -349,7 +354,7 @@ class PyGDCli:
         for remote_child in remote_directory.children:
             if remote_child.is_dir():
                 # recursively download child directory
-                if self._download_recursive(remote_child, remote_directory):
+                if self._download_recursive(remote_child, remote_directory.mirror):
                     change_detected = True
             else:
                 sync = False
@@ -407,7 +412,7 @@ class PyGDCli:
         for local_child in local_directory.children:
             if local_child.is_dir():
                 # recursively upload child directory
-                if self._upload_recursive(local_child, local_directory):
+                if self._upload_recursive(local_child, local_directory.mirror):
                     change_detected = True
             else:
                 sync = False
