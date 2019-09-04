@@ -1,3 +1,4 @@
 *.json
 *.pickle
 *.pk
+*__pycache__*
