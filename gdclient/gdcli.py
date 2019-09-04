@@ -333,6 +333,17 @@ class PyGDCli:
                 return child
         return None
 
+    def _get_by_id(self, idx, root):
+        """ Recursively try to find an object by it's id. """
+        if root.id == idx: 
+            return root 
+        for child in root.children:
+            if child.id == idx:
+                return child
+            elif child.is_dir():
+                return self._get_by_id(idx, child)
+        return None
+
     def _download_recursive(self, remote_directory, local_mirror_parent):
 
         change_detected = False
