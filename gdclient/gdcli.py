@@ -211,7 +211,11 @@ class PyGDCli:
         rmodified = False
 
         if local_db_modifiedTime is None:
-            log.warn("No time info about local file on database. Be careful with your files!", localfile)
+            log.warn("No time info about local file on database. Be careful with your files! ", localfile)
+
+            # if it's the initial sync, we can continue
+            if self.db is None:
+                lmodified = True
         else:
             if local_db_syncTime is None:
                 if ltime > local_db_modifiedTime:
@@ -227,7 +231,11 @@ class PyGDCli:
                     log.error("DB time or local sync time invalid. Something is not quite right.", localfile)
 
         if remote_db_modifiedTime is None:
-            log.warn("No time info about remote file on database. Be careful with your files!", remotefile)
+            log.warn("No time info about remote file on database. Be careful with your files! ", remotefile)
+
+            # if it's the initial sync, we can continue
+            if self.db is None:
+                rmodified = True
         else:
             if remote_db_syncTime is None:
                 if ltime > remote_db_modifiedTime:
@@ -303,7 +311,6 @@ class PyGDCli:
                 parent_object = self.local_root
 
             log.trace("Recursively checking ", directory_object)
-            # pdb.set_trace()                                                 # < ========================================= pdb
             if self._download_recursive(directory_object, parent_object):
                 change_detected = True
             else:
