@@ -176,7 +176,7 @@ class GDriveFS(FileSystem):
 
             # recursively read child directories
             if recursive and childObj.is_dir():
-                childObj.list_dir()
+                childObj.list_dir(recursive=recursive)
 
         log.say("List directory OK")
 

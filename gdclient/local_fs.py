@@ -100,7 +100,7 @@ class LinuxFS(FileSystem):
 
                 # recursively read child directories
                 if recursive and child.is_dir():
-                    child.list_dir()
+                    child.list_dir(recursive=recursive)
         else:
             log.warn("List directory failed: ", self.path)
 
