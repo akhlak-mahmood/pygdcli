@@ -448,8 +448,8 @@ class PyGDCli:
         return change_detected
 
 
-def run():
-    app = PyGDCli('settings.json')
+def run(settings_file):
+    app = PyGDCli(settings_file)
 
     app.read_settings()
     app.setup_remote()

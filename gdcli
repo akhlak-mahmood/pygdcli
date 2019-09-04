@@ -15,7 +15,11 @@ except:
     print("Failed to import Google Drive API libraries.")
     raise
 
-from gdclient import gdcli, cliclient
 
-# cliclient.execute(os.getcwd(), sys.argv[1:])
-gdcli.run()
+if len(sys.argv) < 2:
+	print("\n\tUsage: %s <settings.json>" %sys.argv[0])
+	print("\tNo settings.json specified.\n")
+	exit(1)
+
+from gdclient import gdcli, cliclient
+gdcli.run(sys.argv[1])
