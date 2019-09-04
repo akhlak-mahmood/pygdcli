@@ -130,7 +130,7 @@ if _max_level == None:
     set_max_level(INFO)
 
 if _format is None:
-    set_format(' -- {text}')
+    set_format('-- {level}:: {text}')
 
 if _output is None:
     _output = sys.__stdout__

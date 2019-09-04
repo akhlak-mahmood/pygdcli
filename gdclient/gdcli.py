@@ -237,6 +237,10 @@ class PyGDCli:
                     self.db.update(local_file.tree())
                     self.db.update(remote_file.tree())
 
+            #@todo: upload_sync will be db based
+            # self.sync_dir(self.local_root)
+            # no upload sync for now
+
             self.save_db()
     
         log.say("Sync finished")
@@ -365,36 +369,25 @@ class PyGDCli:
         if not directory_object.is_dir():
             raise ValueError("Can not sync a single file, need a directory.", directory_object)
 
-        if directory_object.mirror is None:
-            raise ValueError("No mirror set, sync will be one way only.", directory_object)
-
         change_detected = False
 
         if directory_object.is_local():
             if parent_object is None:
                 parent_object = self.remote_root
 
+            log.say("Recursively checking local: ", directory_object.name)
             if self._upload_recursive(directory_object, parent_object):
-                change_detected = True
-
-            if self._download_recursive(directory_object.mirror, parent_object.mirror):
                 change_detected = True
 
         else:
             if parent_object is None:
                 parent_object = self.local_root
 
-            log.trace("Recursively checking ", directory_object)
+            log.say("Recursively checking remote: ", directory_object.name)
             if self._download_recursive(directory_object, parent_object):
                 change_detected = True
             else:
                 log.trace("No changes found for ", directory_object)
-
-            log.trace("Recursively checking ", directory_object.mirror)
-            if self._upload_recursive(directory_object.mirror, parent_object.mirror):
-                change_detected = True
-            else:
-                log.trace("No changes found for ", directory_object.mirror)
 
         return change_detected
 
