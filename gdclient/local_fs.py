@@ -85,8 +85,8 @@ class LinuxFS(FileSystem):
             self._is_dir = False
             mmtype = None
             mmtype, encoding = mimetypes.guess_type(self.path)
-            if not mmtype:
-                log.warn("Failed mimetype detect: ", self.path)
+            # if not mmtype:
+            #     log.trace("Failed mimetype detect: ", self.path)
             self.mimeType = mmtype
 
     def list_dir(self, recursive=False):

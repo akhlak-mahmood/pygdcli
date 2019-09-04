@@ -289,7 +289,7 @@ class PyGDCli:
         rmodified = False
 
         if local_db_modifiedTime is None:
-            log.warn("No time info about local file on database. Be careful with your files! ", localfile)
+            log.trace("No time info about local file on database. ", localfile)
 
             # if it's the initial sync, we can continue
             if self.db is None:
@@ -309,7 +309,7 @@ class PyGDCli:
                     log.error("DB time or local sync time invalid. Something is not quite right.", localfile)
 
         if remote_db_modifiedTime is None:
-            log.warn("No time info about remote file on database. Be careful with your files! ", remotefile)
+            log.trace("No time info about remote file on database. ", remotefile)
 
             # if it's the initial sync, we can continue
             if self.db is None:
