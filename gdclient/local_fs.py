@@ -9,6 +9,7 @@ from googleapiclient.http import MediaFileUpload
 
 from . import log, auth, remote_fs
 from .filesystem import *
+from .errors import *
 
 class LinuxFS(FileSystem):
     """ A linux specific file handler.
@@ -16,14 +17,17 @@ class LinuxFS(FileSystem):
 
     def __init__(self, path):
         super().__init__()
+
+        # use relative path from current working directory
+        # so the sync folder can be moved around
         self.path = os.path.relpath(path)
 
         # for local fs, path is id
         self.id = self.path
 
+        # We can create instance even if it doesn't exist yet
         self.exists = os.path.exists(self.path)
         self.name = os.path.basename(self.path)
-        self.add_parent(os.path.dirname(self.path))
 
         if self.exists:
             # this will also set _is_dir, otherwise algorithm will fail
@@ -33,8 +37,12 @@ class LinuxFS(FileSystem):
         return True
 
     def size(self):
-        if self.exists and self.is_file():
-            return os.path.getsize(self.path)
+        if not self.exists:
+            raise ErrorPathNotExists(self)
+        if self.is_dir():
+            raise IsADirectoryError(self)
+
+        return os.path.getsize(self.path)
 
     def create_dir(self):
         # declare this as a directory
@@ -44,12 +52,12 @@ class LinuxFS(FileSystem):
             log.warn("Directory already exists: ", self)
             return
         else:
-            os.mkdir(self.path)
+            os.makedirs(self.path)
             self.exists = True
             log.say("Created local directory: ", self.path)
 
     def md5(self):
-        """ Calculate md5 by chunk, should be okay with large files. """
+        """ Calculate md5 by chunk, this should be okay with large files. """
         if self.is_dir():
             return None
 
@@ -60,24 +68,25 @@ class LinuxFS(FileSystem):
         return md5.hexdigest()
 
     def modifiedTime(self):
-        if self.exists:
-            # get OS modified time
-            t = os.path.getmtime(self.path)
+        if not self.exists:
+            raise ErrorPathNotExists(self)
 
-            # convert unix epoch time string to datetime
-            dt = datetime.utcfromtimestamp(int(t))
+        # get OS modified time
+        t = os.path.getmtime(self.path)
 
-            # set utc timezone
-            return pytz.UTC.localize(dt)
-        else:
-            return None
+        # convert unix epoch time string to datetime
+        dt = datetime.utcfromtimestamp(int(t))
+
+        # set utc timezone
+        return pytz.UTC.localize(dt)
 
     def guess_mimeType(self):
         """ Naive way to guess the mimetype, fails always other
             than for some very common file types."""
 
         if not self.exists:
-            raise RuntimeError("Not found ", self.path)
+            raise ErrorPathNotExists(self)
+
         if os.path.isdir(self.path):
             self._is_dir = True
             self.mimeType = MimeTypes.linux_directory
@@ -91,82 +100,79 @@ class LinuxFS(FileSystem):
 
     def list_dir(self, recursive=False):
         """ Populate self.children list by reading current directory items. """
-        if self.exists and self.is_dir():
-            self.children = []
-            for file in os.listdir(self.path):
-                full_path = os.path.join(self.path, file)
-                child = LinuxFS(full_path)
-                self.children.append(child)
+        if not self.exists:
+            raise ErrorPathNotExists(self)
 
-                # recursively read child directories
-                if recursive and child.is_dir():
-                    child.list_dir(recursive=recursive)
-        else:
-            log.warn("List directory failed: ", self.path)
+        if self.is_file():
+            raise NotADirectoryError(self)
+
+        self.children = []
+        for file in os.listdir(self.path):
+            full_path = os.path.join(self.path, file)
+            child = LinuxFS(full_path)
+            self.children.append(child)
+
+            # recursively read child directories
+            if recursive and child.is_dir():
+                child.list_dir(recursive=recursive)
 
     def gdrive_upload(self, remote_directory):
         """ Upload a new file to G Drive. """
 
         if not self.exists:
-            raise RuntimeError("Upload failed, not found.", self.path)
+            ErrorPathNotExists(self)
 
         if not isinstance(remote_directory, remote_fs.GDriveFS):
-            raise TypeError("Target parent directory must be a remote_fs.GDriveFS type.")
+            raise ErrorNotDriveFSObject(self)
 
-        if self.is_file():
-            remote_file = remote_fs.GDriveFS()
-            remote_file.add_parent(remote_directory.id)
+        if not self.is_file():
+            raise IsADirectoryError(self)
 
-            payload = {
-                'name': self.name,
-                'parents': [remote_directory.id]
-            }
+        remote_file = remote_fs.GDriveFS()
+        remote_file.add_parent(remote_directory.id)
 
-            if not self.mimeType:
-                self.guess_mimeType()
+        payload = {
+            'name': self.name,
+            'parents': [remote_directory.id]
+        }
 
-            media = MediaFileUpload(self.path, 
-                    mimetype = self.mimeType,
-                    chunksize = UPLOAD_CHUNK_SIZE,
-                    resumable = True
-                )
+        if not self.mimeType:
+            self.guess_mimeType()
 
-            file = auth.service.files().create(
-                    body = payload,
-                    media_body = media,
-                    fields = FIELDS         # fields that will be returned in response json
-                )
+        media = MediaFileUpload(self.path, 
+                mimetype = self.mimeType,
+                chunksize = UPLOAD_CHUNK_SIZE,
+                resumable = True
+            )
 
-            response = None
+        file = auth.service.files().create(
+                body = payload,
+                media_body = media,
+                fields = FIELDS         # fields that will be returned in response json
+            )
 
-            while response is None:
-                status, response = file.next_chunk()
-                if status:
-                    log.say("Uploaded %d%%" %int(status.progress() * 100))
+        response = None
 
-            if file:
-                # update the remote file properties with the response json
-                remote_file.set_object(response)
+        while response is None:
+            status, response = file.next_chunk()
+            if status:
+                log.say("Uploaded %d%%" %int(status.progress() * 100))
 
-                # set remote file as mirror of current file
-                self.set_mirror(remote_file)
+        if file:
+            # update the remote file properties with the response json
+            remote_file.set_object(response)
 
-                # record sync time
-                self.syncTime = datetime.now()
-                remote_file.syncTime = self.syncTime
-                log.say("Upload successful: ", self.path)
-                return True
-            else:
-                log.error("Upload failed: ", response)
-                return False
+            # set remote file as mirror of current file
+            self.set_mirror(remote_file)
 
-        elif self.is_dir():
-            raise NotImplementedError("Directory upload not implemented")
-            # create new dir
-            # set mirror as self
-            # set remote as self mirror
-            # upload each child recursively
-
+            # record sync time
+            self.syncTime = datetime.now()
+            remote_file.syncTime = self.syncTime
+            log.say("Upload successful: ", self.path)
+            return True
+        else:
+            log.error("Upload failed: ", response)
+            return False
 
     def gdrive_update(self, remote_file):
         """ Update an existing G Drive file with a local file.
@@ -174,57 +180,53 @@ class LinuxFS(FileSystem):
             """
 
         if not self.exists:
-            raise RuntimeError("Update failed, not found.", self)
+            ErrorPathNotExists(self)
 
         if not isinstance(remote_file, remote_fs.GDriveFS):
-            raise TypeError("Target remote file must be remote_fs.GDriveFS type.", remote_file)
+            raise ErrorNotDriveFSObject(self)
 
-        if self.is_file():
-            payload = {
-                'title': self.name,
-            }
+        if not self.is_file():
+            raise IsADirectoryError(self)
 
-            media = MediaFileUpload(
-                    self.path,
-                    chunksize = UPLOAD_CHUNK_SIZE,
-                    resumable = True
-                )
+        payload = {
+            'title': self.name,
+        }
 
-            file = auth.service.files().update(
-                    fileId = remote_file.id,
-                    body = payload,
-                    media_body = media,
-                    fields = FIELDS         # fields that will be returned in response json
-                )
+        media = MediaFileUpload(
+                self.path,
+                chunksize = UPLOAD_CHUNK_SIZE,
+                resumable = True
+            )
 
-            response = None
+        file = auth.service.files().update(
+                fileId = remote_file.id,
+                body = payload,
+                media_body = media,
+                fields = FIELDS         # fields that will be returned in response json
+            )
 
-            while response is None:
-                status, response = file.next_chunk()
-                if status:
-                    log.say("Uploaded %d%%" %int(status.progress() * 100))
+        response = None
 
-            if file:
-                # update the remote file properties with the response json
-                remote_file.set_object(response)
+        while response is None:
+            status, response = file.next_chunk()
+            if status:
+                log.say("Uploaded %d%%" %int(status.progress() * 100))
 
-                # set remote file as mirror of current file
-                self.set_mirror(remote_file)
+        if file:
+            # update the remote file properties with the response json
+            remote_file.set_object(response)
 
-                # record sync time
-                self.syncTime = datetime.now()
-                remote_file.syncTime = self.syncTime
+            # set remote file as mirror of current file
+            self.set_mirror(remote_file)
 
-                log.say("Update successful: ", self.path)
-                return True
-            else:
-                log.error("Update failed: ", response)
-                return False
+            # record sync time
+            self.syncTime = datetime.now()
+            remote_file.syncTime = self.syncTime
 
-        elif self.is_dir():
-            raise NotImplementedError("Directory upload not implemented")
-            # create new dir
-            # set mirror as self
-            # set remote as self mirror
-            # upload each child recursively
+            log.say("Update successful: ", self.path)
+            return True
+        else:
+            log.error("Update failed: ", response)
+            return False
+
 
