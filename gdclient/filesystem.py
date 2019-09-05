@@ -61,9 +61,6 @@ class FileSystem:
     def md5(self):
         raise NotImplementedError()
 
-    def mimeType(self):
-        return self.mimeType
-
     def set_mirror(self, FS_object):
         """ Attach another file object as a mirror so we can sync them easily. """
         if not isinstance(FS_object, FileSystem):
@@ -93,8 +90,6 @@ class FileSystem:
             "directory":    self.is_dir(),
             "name":         self.name,              
             "mimeType":     self.mimeType,          
-            "parents":      self.parents,           
-            "mirror":       mirror,                 
             "size":         self.size(),            
             "modifiedTime": modifiedTime,           
             "syncTime":     syncTime,              
