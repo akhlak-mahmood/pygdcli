@@ -98,6 +98,15 @@ class GDriveFS(FileSystem):
         self._is_dir = is_a_directory
         self.path = os.path.join(parent_path, name)
 
+    def set_path_id(self, path, idn, is_a_directory):
+        """ If the file/dir was initialized as an empty object,
+            set it's name. """
+        self.path = path
+        self.id = idn
+        self.exists = True          # exists if id is set
+        self._is_dir = is_a_directory
+        self.name = os.path.basename(self.path)
+
     def _parse_object(self, parent_path):
         """ parse the common properties from the api response json. """
         if not self.gdFileObject:
@@ -153,7 +162,7 @@ class GDriveFS(FileSystem):
 
         self.parentIds.append(parent_id)
 
-    def declare_root(self):
+    def declare_gdrive_root(self):
         self.exists = True
         self.path = "/"
         self._is_dir = True
@@ -342,7 +351,7 @@ class GDriveFS(FileSystem):
         if paths[0] != 'root' and not gdrive_path.startswith("/"):
             raise ValueError("Invalid gdrive_path, must start with / or root/")
         else:
-            parent.declare_root()
+            parent.declare_gdrive_root()
 
         if gdrive_path == "/" or gdrive_path == "root":
             return parent
