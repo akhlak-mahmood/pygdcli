@@ -14,6 +14,7 @@ from .remote_fs import GDriveFS, GDChanges
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
+log.set_max_level(log.DEBUG)
 
 class PyGDClient:
     def __init__(self, settings_file):
