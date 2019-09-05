@@ -15,6 +15,12 @@ except:
     print("Failed to import Google Drive API libraries.")
     raise
 
+try:
+	import peewee
+except:
+    print("Failed to import peewee library.")
+    raise
+
 
 if len(sys.argv) < 2:
 	print("\n\tUsage: %s <settings.json>" %sys.argv[0])
