@@ -138,7 +138,7 @@ class PyGDClient:
         self._add_sync_recursive(self.local_root)
     
     def check_updates(self):
-        log.say("Checking for changes")
+        log.say("Checking for changes, not implemented")
         pass 
 
     def run(self):
@@ -152,3 +152,5 @@ class PyGDClient:
 
         # start syncing
         self.sync.run()
+
+        db.close()
