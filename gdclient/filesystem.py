@@ -20,7 +20,6 @@ class FileSystem:
         self.name = None
         self.path = None
         self.id = None
-        self.parents = None
         self.children = []
         self.mirror = None
         self.mimeType = None
@@ -64,16 +63,6 @@ class FileSystem:
 
     def mimeType(self):
         return self.mimeType
-
-    def add_parent(self, parent_id):
-        """ A file/dir can have more than one parent directory. """
-        if self.parents is None:
-            self.parents = []
-
-        if isinstance(parent_id, FileSystem):
-            raise TypeError("parent must be an id/path")
-
-        self.parents.append(parent_id)
 
     def set_mirror(self, FS_object):
         """ Attach another file object as a mirror so we can sync them easily. """
