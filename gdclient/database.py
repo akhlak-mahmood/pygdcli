@@ -65,24 +65,46 @@ def connect(database_file):
 		log.say("Database connect OK")
 
 
-def add(item):
-	if not isinstance(item, filesystem.FileSystem):
-		raise ErrorNotFileSystemObject(item)
+#@todo: rewrite these db functions for better performance
 
-	if item.path is None:
-		raise ErrorPathResolve(item)
+def _db_object_from_file(fileObj):
+	if not isinstance(fileObj, filesystem.FileSystem):
+		raise ErrorNotFileSystemObject(fileObj)
+
+	if fileObj.path is None:
+		raise ErrorPathResolve(fileObj)
 
 	fp = File()
-	fp.name 	= item.name
 
-	if isinstance(item, LinuxFS):
+	if isinstance(fileObj, LinuxFS):
 		fp.fstype = FileType.LinuxFS
-	elif isinstance(item, GDriveFS):
+	elif isinstance(fileObj, GDriveFS):
 		fp.fstype = FileType.DriveFS
 
-	fp.path 	= item.path
+	fp.path 	= fileObj.path
+	fp.is_dir	= fileObj.is_dir()
+
+	return fp
+
+def _file_object_from_db(dbObj):
+	fp = None
+	if dbObj.fstype == FileType.LinuxFS:
+		fp = LinuxFS(dbObj.path)
+		fp._is_dir = dbObj.is_dir
+	elif dbObj.fstype == FileType.DriveFS:
+		fp = GDriveFS()
+		fp.set_path_id(dbObj.path, dbObj.id_str)
+
+	return fp
+
+def add(item):
+	fp = _db_object_from_file(item)
+	if fp.select().count() > 0:
+		log.warn("Database add, already exists: ", fp.path)
+		return
+
+	fp.name 	= item.name
 	fp.id_str 	= item.id
-	fp.is_dir	= item.is_dir()
 	fp.status 	= 0
 	fp.mimeType = item.mimeType
 	fp.time_modified = item.modifiedTime()
@@ -98,16 +120,23 @@ def add(item):
 def is_empty():
 	return File.select().limit(1).count() == 0
 
-def path_exists():
-	pass 
+def file_exists(item):
+	fp = _db_object_from_file(item)
+	return fp.select().count() > 0
 
-def get_path_by_id():
-	pass
+def get_file_by_id(idn):
+	dbObj = File.select().where(File.id_str == idn)
+	return _file_object_from_db(dbObj[0])
 
 def update_status(item, status):
-	pass
+	if not isinstance(status, Status):
+		raise TypeError("Not a Status type object.", status)
 
-def save():
+	fp = _db_object_from_file(item)
+	fp.status = status
+	fp.save()
+
+def close():
 	global _db
 	_db.commit()
 	_db.close()
