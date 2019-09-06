@@ -86,7 +86,7 @@ class GDriveFS(FileSystem):
 
     def md5(self):
         if self.is_dir():
-            raise IsADirectoryError(self)
+            return None
         return self._md5
 
     def mimeType(self):
