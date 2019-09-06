@@ -226,5 +226,9 @@ class LinuxFS(FileSystem):
         if not isinstance(mirror, remote_fs.GDriveFS):
             raise ErrorNotDriveFSObject(mirror)
 
-        return self.gdrive_upload(mirror.parentIds)
+        response = self.gdrive_upload(mirror.parentIds)
 
+        # path should be already set, so parent path is None
+        mirror.set_object(response, None)
+
+        return mirror
