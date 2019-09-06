@@ -247,24 +247,27 @@ class GDriveFS(FileSystem):
                 log.error("Failed to backup as: ", backup_path)
                 log.warn("Continuing anyway ...")
 
-        # download bytes to memory, may fail in case of huge files
-        fh = self.download_to_memory()
+        try:
+            # download bytes to memory, may fail in case of huge files
+            fh = self.download_to_memory()
 
-        log.trace("Writing file ", local_file.path)
+            log.trace("Writing file ", local_file.path)
 
-        # write memory byte to disk
-        fh.seek(0)
+            # write memory byte to disk
+            fh.seek(0)
 
-        with open(local_file.path, 'wb') as f:
-            shutil.copyfileobj(fh, f, length=WRITE_CHUNK_SIZE)
+            with open(local_file.path, 'wb') as f:
+                shutil.copyfileobj(fh, f, length=WRITE_CHUNK_SIZE)
 
-        local_file.exists = True
+            local_file.exists = True
+            log.say("Save OK ", local_file.path)
+        except:
+            log.error("Failed to download:", self.path)
+            return False
 
         # record sync time
         self.syncTime = datetime.now()
         local_file.syncTime = self.syncTime
-
-        log.say("Save OK ", local_file.path)
 
         try:
             # remove the backup
@@ -272,6 +275,8 @@ class GDriveFS(FileSystem):
             log.say("Removed backup: ", backup_path)
         except:
             log.warn("Failed to remove local backup: ", backup_path)
+
+        return True
 
 
     def download_to_memory(self):
@@ -380,7 +385,8 @@ class GDriveFS(FileSystem):
         return parent
 
     def upload_or_download(self, mirror):
-        return self.download_to_local(mirror)
+        self.download_to_local(mirror)
+        return mirror
 
 
 class GDChanges:
