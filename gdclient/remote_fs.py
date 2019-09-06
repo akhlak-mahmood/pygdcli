@@ -103,7 +103,7 @@ class GDriveFS(FileSystem):
 
     def set_name(self, parent_path, name, is_a_directory):
         """ If the file/dir was initialized as an empty object,
-            set it's name. """
+            set it's name and path. """
         self.name = name
         self._is_dir = is_a_directory
         self.path = os.path.join(parent_path, name)
@@ -121,13 +121,13 @@ class GDriveFS(FileSystem):
 
     def _parse_object(self, parent_path):
         """ parse the common properties from the api response json. """
-        if not self.gdFileObject:
-            raise ValueError("Can not parse gdFileObject, not set")
 
         # if has a valid id, it exists
         self.id = self.gdFileObject.get('id')
         if self.id is None:
             raise ErrorParseResponseObject(self, self.gdFileObject)
+
+        self.exists = True
 
         # we will resolve the path using name
         self.name = self.gdFileObject.get('name')
@@ -140,8 +140,6 @@ class GDriveFS(FileSystem):
             raise ErrorPathResolve("Undefined parent path, path needs to be resolved.", self)
         else:
             self.path = os.path.join(parent_path, self.name)
-
-        self.exists = True
 
         self._mimeType = self.gdFileObject.get('mimeType')
         self._modifiedTime = self.gdFileObject.get('modifiedTime')
@@ -171,9 +169,6 @@ class GDriveFS(FileSystem):
         """ A file/dir can have more than one parent directory. """
         if self.parentIds is None:
             self.parentIds = []
-
-        if isinstance(parent_id, FileSystem):
-            raise TypeError("parent_id must be an id/path")
 
         self.parentIds.append(parent_id)
 
