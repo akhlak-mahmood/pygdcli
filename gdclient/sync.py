@@ -26,6 +26,9 @@ class Sync:
     def login(self):
         auth.authenticate(self.credentials_file, self.token_file)
 
+    def __repr__(self):
+        return "SyncQ items: \n" + "\n".join([str(i) for i in self.queue])
+
     def add(self, item):
         """ Add an item to sync queue """
         if not isinstance(item, FileSystem):
