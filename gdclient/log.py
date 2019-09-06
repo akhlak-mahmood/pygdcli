@@ -98,20 +98,18 @@ def _new(text):
 
 def _formatted(*text):
     if len(text) == 1:
-        return text[0]
+        return str(text[0]).strip()
     else:
-        fmt = text[0]
+        fmt = str(text[0])
         args = []
         for i in range(len(text) - 1):
-            args.append(text[i+1].__str__())
+            args.append(str(text[i+1]))
 
         if "{" in fmt and "}" in fmt:
             return fmt.format(*args)
         else:
-            # hack to remove extra spaces
-            others = " ".join(args)
-            args = others.split()
-            return fmt + " " + " ".join(args)
+            args.insert(0, fmt)
+            return " ".join(args)
 
 def trace(*text):
     _log(DEBUG, _formatted(*text))
