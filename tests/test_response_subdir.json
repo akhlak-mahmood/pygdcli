@@ -1,0 +1,70 @@
+{
+  "files": [
+    {
+      "id": "test_id_1234R2lVcjVtSGFCSEU",
+      "name": ".picasa.ini",
+      "mimeType": "application/octet-stream",
+      "parents": [
+        "12345_photo_folder"
+      ],
+      "modifiedTime": "2019-09-03T00:57:58.391Z",
+      "md5Checksum": "ba64c561c8cff54176868d2dfdc856a3",
+      "size": "45"
+    },
+    {
+      "id": "test_id_1234SVdJZmdZLWxMcUk",
+      "name": "Sample Photo (5).JPG",
+      "mimeType": "image/jpeg",
+      "parents": [
+        "12345_photo_folder"
+      ],
+      "modifiedTime": "2016-05-29T14:58:12.000Z",
+      "md5Checksum": "f4a43248dcc1d55d67657aa4a07faa61",
+      "size": "3022463"
+    },
+    {
+      "id": "test_id_1234bEJPNEl0bjhvNEk",
+      "name": "Sample Photo (4).JPG",
+      "mimeType": "image/jpeg",
+      "parents": [
+        "12345_photo_folder"
+      ],
+      "modifiedTime": "2016-05-29T14:57:58.000Z",
+      "md5Checksum": "1c7b83f3d131247a7f3959997156393c",
+      "size": "2972753"
+    },
+    {
+      "id": "test_id_1234YjFWWDh1TUN6akU",
+      "name": "Sample Photo (3).JPG",
+      "mimeType": "image/jpeg",
+      "parents": [
+        "12345_photo_folder"
+      ],
+      "modifiedTime": "2016-05-29T14:57:46.000Z",
+      "md5Checksum": "da513cfdfa3d9a81a7d28aec7995fe6e",
+      "size": "2996526"
+    },
+    {
+      "id": "test_id_1234cUMwc1hKcV9LYTg",
+      "name": "Sample Photo (2).JPG",
+      "mimeType": "image/jpeg",
+      "parents": [
+        "12345_photo_folder"
+      ],
+      "modifiedTime": "2016-05-29T14:43:30.000Z",
+      "md5Checksum": "165b0aafd2c94e8f9da534db57e170d6",
+      "size": "2981538"
+    },
+    {
+      "id": "test_id_1234MUdpVDBLMmp0cTg",
+      "name": "Sample Photo (1).JPG",
+      "mimeType": "image/jpeg",
+      "parents": [
+        "12345_photo_folder"
+      ],
+      "modifiedTime": "2016-05-29T14:43:22.000Z",
+      "md5Checksum": "88014eca3ffbd8cf0e72ae4d504c083e",
+      "size": "2963064"
+    }
+  ]
+}
