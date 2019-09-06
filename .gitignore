@@ -1,4 +1,7 @@
 *.json
 *.pickle
 *.pk
-*__pycache__*
+*.pyc
+*.sqlite
+*.bak
+Photos/*
