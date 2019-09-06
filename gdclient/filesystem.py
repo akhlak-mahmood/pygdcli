@@ -76,23 +76,8 @@ class FileSystem:
         FS_object.mirror = self
 
     def __repr__(self):
-        modifiedTime = None
-        if self.modifiedTime():
-            modifiedTime = self.modifiedTime().strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
-
-        syncTime = None
-        if self.syncTime:
-            syncTime = self.syncTime.strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
-
-        items = {
-            "directory":    self._is_dir,
-            "type":         self.__class__.__name__,
-            # "name":         self.name,
-            # "mimeType":     self._mimeType,
-            "path":         self.path
-        }
-
-        return str(items)
+        text = [self.__class__.__name__, "D" if self.is_dir() else "F", self.path]
+        return "::".join(text)
 
     def __str__(self):
         return self.__repr__()
