@@ -155,7 +155,6 @@ class LinuxFS(FileSystem):
         if file:
             # record sync time
             self.syncTime = datetime.now()
-            remote_file.syncTime = self.syncTime
             log.say("Upload successful: ", self.path)
             return response
         else:
