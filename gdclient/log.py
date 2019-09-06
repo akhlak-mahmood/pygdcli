@@ -108,7 +108,7 @@ def _formatted(*text):
         if "{" in fmt and "}" in fmt:
             return fmt.format(*args)
         else:
-            args.insert(0, fmt)
+            args.insert(0, fmt.strip())
             return " ".join(args)
 
 def trace(*text):
