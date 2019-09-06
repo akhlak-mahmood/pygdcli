@@ -115,56 +115,65 @@ class PyGDClient:
         if not directory.is_dir():
             raise NotADirectoryError(directory)
 
-        # add the directory itself
-        try:
-            db.add(directory)
-        except:
-            raise RuntimeError("Failed to add ", directory)
+        log.trace("Processing directory ", directory.path)
+
         self.sync.add(directory)
         db.update_status(directory, db.Status.queued)
 
-        log.trace("Processing children of ", directory.path)
         # add children, recursively
         for child in directory.children:
             if child.is_dir():
                 self._add_sync_recursive(child)
             else:
-                try:
-                    db.add(child)
-                except:
-                    raise RuntimeError("Failed to add ", child)
                 self.sync.add(child)
                 db.update_status(child, db.Status.queued)
 
-    def setup_db_tree(self):
-        # Assuming nothing exists in the db
-        # Populate it with local and remote items
-        log.say("Setting up database")
+    def _add_sync_database(self):
+        for fp in db.get_all_items():
+            self.sync.add(fp)
+        log.trace("Added database items to SyncQ")
 
-        # Fetch remote items tree
-        self.build_remote_tree()
-
-        # Start adding items to db and queue for sync
-        self._add_sync_recursive(self.local_root)
-        self._add_sync_recursive(self.remote_root)
-    
-    def check_updates(self):
-        log.say("Checking for changes, not implemented")
-        pass 
+    def _add_sync_remote_changes(self):
+        log.trace("Added reported remote changes to SyncQ, not implemented")
+        pass
 
     def run(self):
-        # recursively check the local files
-        self.build_local_tree()
 
         if db.is_empty():
-            self.setup_db_tree()
+            # Assuming nothing exists in the db
+            # Populate it with local and remote items
+            log.say("Setting up database tree")
+
+            # recursively check the local files
+            self.build_local_tree()
+            self._add_sync_recursive(self.local_root)
+
+            # Fetch remote items tree
+            self.build_remote_tree()
+
+            db.add(self.local_root)
+            db.add(self.remote_root)
+
+            # recursively add all remote files to queue
+            self._add_sync_recursive(self.remote_root)
         else:
-            self.check_updates()
+            log.say("Checking for changes.")
+            # recursively check the local files
+            self.build_local_tree()
+            self._add_sync_recursive(self.local_root)
+
+            # add database items to queue
+            self._add_sync_database()
+
+            # fetch remote changes and add to queue
+            self._add_sync_remote_changes()
 
         # print(self.sync)
 
         # start syncing
         self.sync.run()
+
+        print(self.sync)
 
         db.close()
         self.settings.save(self.settings_file)

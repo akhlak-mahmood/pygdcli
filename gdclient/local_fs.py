@@ -30,8 +30,13 @@ class LinuxFS(FileSystem):
         self.name = os.path.basename(self.path)
 
         if self.exists:
-            # this will set _is_dir
-            self.guess_mimeType()
+            if os.path.isdir(self.path):
+                self._is_dir = True
+                self._mimeType = MimeTypes.linux_directory
+            else:
+                self._is_dir = False
+                mmtype, encoding = mimetypes.guess_type(self.path)
+                self._mimeType = mmtype
 
         # explicitly set is_dir if specified
         if is_dir is not None:
@@ -85,24 +90,6 @@ class LinuxFS(FileSystem):
         # set utc timezone
         return pytz.UTC.localize(dt)
 
-    def guess_mimeType(self):
-        """ Naive way to guess the mimetype, fails always other
-            than for some very common file types."""
-
-        if not self.exists:
-            raise ErrorPathNotExists(self)
-
-        if os.path.isdir(self.path):
-            self._is_dir = True
-            self._mimeType = MimeTypes.linux_directory
-        else:
-            self._is_dir = False
-            mmtype = None
-            mmtype, encoding = mimetypes.guess_type(self.path)
-            # if not mmtype:
-            #     log.trace("Failed mimetype detect: ", self.path)
-            self._mimeType = mmtype
-
     def list_dir(self, recursive=False):
         """ Populate self.children list by reading current directory items. """
         if not self.exists:
@@ -134,9 +121,6 @@ class LinuxFS(FileSystem):
             'name': self.name,
             'parents': parentIds
         }
-
-        if not self._mimeType:
-            self.guess_mimeType()
 
         media = MediaFileUpload(self.path, 
                 mimetype = self._mimeType,

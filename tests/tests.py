@@ -6,6 +6,7 @@ import gdclient.database as db
 from gdclient.errors import *
 from gdclient.local_fs import LinuxFS
 from gdclient.remote_fs import GDriveFS
+from gdclient.filesystem import FileSystem
 
 remote_path = '/Photos'
 local_path = 'Sync_Dir'
@@ -150,7 +151,7 @@ class TestDatabase(unittest.TestCase):
 
         fp2 = db._file_object_from_db(dbObj)
 
-        self.assertIsInstance(fp2, LinuxFS)
+        self.assertIsInstance(fp2, FileSystem)
         self.assertEqual(fp2.path, fp.path)
         self.assertIsNotNone(fp2.name)
         self.assertIsNotNone(fp2.id)
@@ -173,13 +174,16 @@ class TestDatabase(unittest.TestCase):
 
         fp2 = db._file_object_from_db(dbObj)
 
-        self.assertIsInstance(fp2, LinuxFS)
+        self.assertIsInstance(fp2, FileSystem)
         self.assertEqual(fp2.path, fp.path)
         self.assertIsNotNone(fp2.name)
         self.assertIsNotNone(fp2.id)
         self.assertIsNotNone(fp2.is_dir())
 
     def test_file_exists(self):
+        all_items = db.get_all_items()
+        self.assertEqual(len(all_items), 6)
+
         fp = LinuxFS("settings.json")
         dp = LinuxFS("gdclient")
         rr = GDriveFS()

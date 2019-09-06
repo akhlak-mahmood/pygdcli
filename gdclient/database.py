@@ -106,16 +106,29 @@ def _db_object_from_file(fileObj):
 	fp.time_updated = datetime.utcnow()
 	return fp
 
-def _file_object_from_db(dbObj):
+def _bare_file_object_from_db(dbObj):
 	fp = None
 	if dbObj.fstype == FileType.LinuxFS:
-		fp = LinuxFS(dbObj.path)
-		fp._is_dir = dbObj.is_dir
+		fp = LinuxFS(dbObj.path, dbObj.is_dir)
 	elif dbObj.fstype == FileType.DriveFS:
 		fp = GDriveFS()
 		fp.set_path_id(dbObj.path, dbObj.id_str, dbObj.is_dir)
 
 	return fp
+
+def _file_object_from_db(dbObj):
+	dbFile = _bare_file_object_from_db(dbObj)
+	dbFile.id = dbObj.id_str
+	dbFile.path = dbObj.path 
+	dbFile.name = dbObj.name
+	dbFile._md5 = dbObj.md5
+	dbFile._size = dbObj.size
+	dbFile._is_dir = dbObj.is_dir
+	dbFile.syncTime = dbObj.time_updated
+	dbFile._mimeType = dbObj.mimeType
+	dbFile._modifiedTime = dbObj.time_modified
+	return dbFile
+
 
 def _get_rows(dbObj):
 	return File.select().where(
@@ -126,11 +139,11 @@ def _get_rows(dbObj):
 			)
 
 def add(item):
+	""" Add if not exists. """
 	fp = _db_object_from_file(item)
 	results = _get_rows(fp)
 	if results.count() > 0:
-		log.warn("Database add, already exists: ", fp.path)
-		print("Count", results.count())
+		log.trace("Database add, already exists: ", fp.path)
 		return False
 	else:
 		fp.save()
@@ -141,23 +154,26 @@ def is_empty():
 	return File.select().limit(1).count() == 0
 
 def file_exists(item):
-	fp = _db_object_from_file(item)
-	results = _get_rows(fp)
-	return results.count() > 0
+	dbObj = _db_object_from_file(item)
+	return _get_rows(dbObj).count() > 0
+
+def get_file_as_db(item):
+	""" Return a db object with info as saved in database. """
+	dbObj = _db_object_from_file(item)
+	results = _get_rows(dbObj)
+	return _file_object_from_db(results[0]) if results.count() > 0 else None
 
 def get_file_by_id(idn):
 	dbObj = File.select().where(File.id_str == idn)
-	if dbObj.count() > 0:
-		return _file_object_from_db(dbObj[0])
-	else:
-		return None
+	return _file_object_from_db(dbObj[0]) if dbObj.count() > 0 else None
 
 def get_row_by_id(idn):
 	results = File.select().where(File.id_str == idn)
-	if results.count() > 0:
-		return results[0]
-	else:
-		return None
+	return results[0] if results.count() > 0 else None
+
+def get_all_items():
+	results = File.select().where(File.deleted == False)
+	return [_file_object_from_db(r) for r in results]
 
 def _db_mirror_from_file(item):
 	item = _db_object_from_file(item)
@@ -192,7 +208,7 @@ def _find_db_object_parent_as_file(dbObj):
 	if results.count() == 0:
 		return None 
 	else:
-		return _file_object_from_db(results[0])
+		return _bare_file_object_from_db(results[0])
 
 def mirror_exists(item):
 	""" If mirror item actually exists in database. """
@@ -207,24 +223,24 @@ def get_mirror(item):
 	if mirror.fstype == FileType.DriveFS:
 		parent = _find_db_object_parent_as_file(mirror)
 		if parent is None:
-			mirror = _file_object_from_db(mirror)
+			mirror = _bare_file_object_from_db(mirror)
 			raise ErrorParentNotFound(item)
-		mirror = _file_object_from_db(mirror)
+		mirror = _bare_file_object_from_db(mirror)
 		mirror.add_parent_id(parent.id)
 	else:
-		mirror = _file_object_from_db(mirror)
+		mirror = _bare_file_object_from_db(mirror)
 
 	return mirror
 
 def update_status(item, status):
-	dbObj = _db_object_from_file(item)
+	fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
 	query = File.update(
 				status=status,
 				time_updated=datetime.utcnow()
 			).where(
-				(File.path == dbObj.path) &
-				(File.is_dir == dbObj.is_dir) &
-				(File.fstype == dbObj.fstype) &
+				(File.path == item.path) &
+				(File.is_dir == item.is_dir()) &
+				(File.fstype == fstype) &
 				(File.deleted == False)
 			)
 	query.execute()

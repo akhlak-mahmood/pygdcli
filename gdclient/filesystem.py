@@ -21,12 +21,13 @@ class FileSystem:
         self.path = None
         self.id = None
         self.children = []
-        self.mirror = None
-        self._mimeType = None
         self.exists = None
         self._is_dir = None
         self._size = None
         self.syncTime = None
+        self._md5 = None
+        self._mimeType = None
+        self._modifiedTime = None
 
     def is_dir(self):
         if self._is_dir is None:
@@ -59,29 +60,22 @@ class FileSystem:
         return self._mimeType
 
     def modifiedTime(self):
-        raise NotImplementedError()
+        return self._modifiedTime
 
     def md5(self):
-        raise NotImplementedError()
-
-    def set_mirror(self, FS_object):
-        """ Attach another file object as a mirror so we can sync them easily. """
-        if not isinstance(FS_object, FileSystem):
-            raise TypeError("Must be a FileSystem type object to set mirror.")
-
-        if self.is_dir() != FS_object.is_dir():
-            raise TypeError("Can not set mirror between directory and file.", self, FS_object)
-
-        self.mirror = FS_object
-        FS_object.mirror = self
+        return self._md5
 
     def __repr__(self):
-        text = [self.__class__.__name__, "D" if self.is_dir() else "F", self.path]
+        text = [
+            self.__class__.__name__,
+            "D" if self.is_dir() else "F",
+            self.path,
+            str(self.size())
+        ]
         return "::".join(text)
 
     def __str__(self):
         return self.__repr__()
-
 
     def print_children(self):
         print("No.  DIR \t NAME \t\t md5 \t modifiedTime")
@@ -113,4 +107,7 @@ class FileSystem:
         return True
 
     def upload_or_download(self, mirror):
+        raise NotImplementedError()
+
+    def update(self, mirror):
         raise NotImplementedError()
