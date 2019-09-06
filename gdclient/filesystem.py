@@ -107,32 +107,20 @@ class FileSystem:
                 modifiedTime = child.modifiedTime().strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
             print("%d   %s \t %s \t\t %s \t %s" %(i+1, child.is_dir(), child.name, child.md5(), modifiedTime))
 
-    def same_file(self):
+    def same_file(self, mirror):
         """ Compare a file with it's mirror file. """
 
         if self.is_dir():
-            raise ValueError("Can not compare directory")
+            raise TypeError("Can not compare directory", self)
 
-        if not self.mirror:
-            raise ValueError("No mirror item set to compare")
-
-        if not isinstance(self.mirror, FileSystem):
-            raise TypeError("Mirror is not an object")
-
-        size = self.size()
-        if not size:
-            raise RuntimeError("Failed to determine size")
+        if not isinstance(mirror, FileSystem):
+            raise TypeError("Mirror is not a FileSystem object", mirror)
 
         # If size is not same, they can't be the same
-        if size != self.mirror.size():
+        if self.size() != mirror.size():
             return False
 
-        # Finally check md5 hash of the file contents
-        md5 = self.md5()
-        if not md5:
-            raise RuntimeError("Failed to determine md5")
-
-        if md5 != self.mirror.md5():
+        if self.md5() != mirror.md5():
             return False
 
         #@todo: add byte by byte comparison option if md5 not available
