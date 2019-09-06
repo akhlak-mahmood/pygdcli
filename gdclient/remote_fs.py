@@ -75,10 +75,7 @@ class GDriveFS(FileSystem):
             raise RuntimeError("Failed to create remote directory.", response)
 
     def modifiedTime(self):
-        if not self.exists:
-            raise ErrorPathNotExists(self)
-
-        if self._modifiedTime is None:
+        if not self.exists or self._modifiedTime is None:
             return None
 
         # parse the RFC 3339 time as python datetime with utc timezone
@@ -182,16 +179,16 @@ class GDriveFS(FileSystem):
     def list_dir(self, nextPageToken=None, recursive=False):
         """ Populate the self.children items by sending an api request to GDrive. """
         if not self.id:
-            raise RuntimeError("ID not set", self)
+            raise RuntimeError("ID not set, can not list directory.", self)
 
         if not self.is_dir():
-            raise NotADirectoryError("Can not list, object is a file", self)
+            raise NotADirectoryError("Can not list, object is a file.", self)
 
         if not self.exists:
-            raise ErrorPathNotExists(self)
+            raise ErrorPathNotExists("Remote directory does not exist, can not list.", self)
 
         if self.path is None:
-            raise ErrorPathResolve("Path not set.", self)
+            raise ErrorPathResolve("Path not set, can not initialize children.", self)
 
         if nextPageToken:
             log.trace("List directory fetching next page: ", self.path)
