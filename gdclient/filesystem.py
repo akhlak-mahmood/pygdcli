@@ -138,3 +138,6 @@ class FileSystem:
         #@todo: add byte by byte comparison option if md5 not available
 
         return True
+
+    def upload_or_download(self, mirror):
+        raise NotImplementedError()

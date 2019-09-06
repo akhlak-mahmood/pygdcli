@@ -387,6 +387,9 @@ class GDriveFS(FileSystem):
         log.say("Resolved path OK: ", parent.path)
         return parent
 
+    def upload_or_download(self, mirror):
+        return self.download_to_local(mirror)
+
 
 class GDChanges:
     def __init__(self, last_poll_token=None):

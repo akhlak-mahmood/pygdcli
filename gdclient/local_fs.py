@@ -116,24 +116,18 @@ class LinuxFS(FileSystem):
             if recursive and child.is_dir():
                 child.list_dir(recursive=recursive)
 
-    def gdrive_upload(self, remote_directory):
+    def gdrive_upload(self, parentIds):
         """ Upload a new file to G Drive. """
 
         if not self.exists:
             ErrorPathNotExists(self)
 
-        if not isinstance(remote_directory, remote_fs.GDriveFS):
-            raise ErrorNotDriveFSObject(self)
-
         if not self.is_file():
             raise IsADirectoryError(self)
 
-        remote_file = remote_fs.GDriveFS()
-        remote_file.add_parent(remote_directory.id)
-
         payload = {
             'name': self.name,
-            'parents': [remote_directory.id]
+            'parents': parentIds
         }
 
         if not self._mimeType:
@@ -159,20 +153,14 @@ class LinuxFS(FileSystem):
                 log.say("Uploaded %d%%" %int(status.progress() * 100))
 
         if file:
-            # update the remote file properties with the response json
-            remote_file.set_object(response)
-
-            # set remote file as mirror of current file
-            self.set_mirror(remote_file)
-
             # record sync time
             self.syncTime = datetime.now()
             remote_file.syncTime = self.syncTime
             log.say("Upload successful: ", self.path)
-            return True
+            return response
         else:
             log.error("Upload failed: ", response)
-            return False
+            return None
 
     def gdrive_update(self, remote_file):
         """ Update an existing G Drive file with a local file.
@@ -229,4 +217,10 @@ class LinuxFS(FileSystem):
             log.error("Update failed: ", response)
             return False
 
+
+    def upload_or_download(self, mirror):
+        if not isinstance(mirror, remote_fs.GDriveFS):
+            raise ErrorNotDriveFSObject(mirror)
+
+        return self.gdrive_upload(mirror.parentIds)
 
