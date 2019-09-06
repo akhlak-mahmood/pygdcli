@@ -15,7 +15,7 @@ class LinuxFS(FileSystem):
     """ A linux specific file handler.
         Can upload files to Google Drive. """
 
-    def __init__(self, path):
+    def __init__(self, path, is_dir=None):
         super().__init__()
 
         # use relative path from current working directory
@@ -30,17 +30,22 @@ class LinuxFS(FileSystem):
         self.name = os.path.basename(self.path)
 
         if self.exists:
-            # this will also set _is_dir, otherwise algorithm will fail
+            # this will set _is_dir
             self.guess_mimeType()
+
+        # explicitly set is_dir if specified
+        if is_dir is not None:
+            self._is_dir = is_dir
+
 
     def is_local(self):
         return True
 
     def size(self):
         if not self.exists:
-            raise ErrorPathNotExists(self)
+            return None
         if self.is_dir():
-            raise IsADirectoryError(self)
+            return None
 
         return os.path.getsize(self.path)
 
@@ -58,7 +63,7 @@ class LinuxFS(FileSystem):
 
     def md5(self):
         """ Calculate md5 by chunk, this should be okay with large files. """
-        if self.is_dir():
+        if self.is_dir() or not self.exists:
             return None
 
         md5 = hashlib.md5()
@@ -69,7 +74,7 @@ class LinuxFS(FileSystem):
 
     def modifiedTime(self):
         if not self.exists:
-            raise ErrorPathNotExists(self)
+            return None
 
         # get OS modified time
         t = os.path.getmtime(self.path)

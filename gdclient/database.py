@@ -9,6 +9,7 @@ from .errors import *
 from .local_fs import LinuxFS
 from .remote_fs import GDriveFS
 
+_local_root = None
 _remote_root = None
 _db = SqliteDatabase(None)
 
@@ -58,15 +59,13 @@ class File(BaseModel):
 	size		= IntegerField(null=True)
 
 
-def connect(database_file, remote_root_path):
+def connect(database_file, remote_root_path, local_root_path):
 	""" Initialize the database, connect, create tables if needed.
 		Return the database object. """
-	global _remote_root
+	global _remote_root, _local_root
 
-	if remote_root_path is None:
-		raise ValueError("Please specify the path to the remote root.")
-
-	_remote_root = remote_root_path
+	_remote_root	= remote_root_path
+	_local_root		= local_root_path
 
 	if _db.is_closed():
 		_db.init(database_file)
@@ -168,9 +167,11 @@ def _db_mirror_from_file(item):
 	if item.fstype == FileType.DriveFS:
 		mirror.fstype = FileType.LinuxFS
 		path = os.path.relpath(item.path, _remote_root)
+		path = os.path.join(_local_root, path)
 	else:
 		mirror.fstype = FileType.DriveFS
-		path = os.path.join(_remote_root, item.path)
+		path = os.path.relpath(item.path, _local_root)
+		path = os.path.join(_remote_root, path)
 
 	mirror.path = os.path.normpath(path)
 
@@ -194,17 +195,20 @@ def _find_db_object_parent_as_file(dbObj):
 		return _file_object_from_db(results[0])
 
 def mirror_exists(item):
+	""" If mirror item actually exists in database. """
 	mirror = _db_mirror_from_file(item)
 	results = _get_rows(mirror)
 	return results.count() > 0
 
 def get_mirror(item):
+	""" Calculate mirror properties without checking if it
+		exists. Only parent needs to exist. """
 	mirror = _db_mirror_from_file(item)
 	if mirror.fstype == FileType.DriveFS:
 		parent = _find_db_object_parent_as_file(mirror)
 		if parent is None:
 			mirror = _file_object_from_db(mirror)
-			raise ErrorParentNotFound(mirror)
+			raise ErrorParentNotFound(item)
 		mirror = _file_object_from_db(mirror)
 		mirror.add_parent_id(parent.id)
 	else:

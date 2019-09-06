@@ -7,6 +7,10 @@ from gdclient.errors import *
 from gdclient.local_fs import LinuxFS
 from gdclient.remote_fs import GDriveFS
 
+remote_path = '/Photos'
+local_path = 'Sync_Dir'
+
+
 def load_test_responses():
     with open('tests/test_response_parent.json', 'r') as fp:
         a = json.load(fp)
@@ -21,19 +25,19 @@ class TestRemote(unittest.TestCase):
     def test_path_id(self):
         parent, subdir = load_test_responses()
         rf = GDriveFS()
-        rf.set_path_id('/sync_dir', 'test_12345', True)
+        rf.set_path_id(remote_path, 'test_12345', True)
 
         self.assertIsNotNone(rf.path)
         self.assertTrue(rf.is_dir())
         self.assertTrue(rf.exists)
         self.assertEqual(rf.id, 'test_12345')
-        self.assertEqual(rf.path, '/sync_dir')
+        self.assertEqual(rf.path, remote_path)
         self.assertIsNotNone(rf.mimeType())
 
         # set a google doc response object and parent path
         sd = GDriveFS(parent.get('files')[0], rf.path)
         
-        self.assertEqual(sd.path, '/sync_dir/Market')
+        self.assertEqual(sd.path, remote_path+'/Market')
         self.assertFalse(sd.is_dir())
         self.assertIn(rf.id, sd.parentIds)
         self.assertTrue(sd.exists)
@@ -43,7 +47,7 @@ class TestRemote(unittest.TestCase):
         # set a file response object and parent path
         sd = GDriveFS(parent.get('files')[1], rf.path)
         
-        self.assertEqual(sd.path, '/sync_dir/download.pdf')
+        self.assertEqual(sd.path, remote_path+'/Document.pdf')
         self.assertFalse(sd.is_dir())
         self.assertIn(rf.id, sd.parentIds)
         self.assertTrue(sd.exists)
@@ -53,7 +57,7 @@ class TestRemote(unittest.TestCase):
         # set a directory response object and parent path
         sd = GDriveFS(parent.get('files')[3], rf.path)
         
-        self.assertEqual(sd.path, '/sync_dir/Photos')
+        self.assertEqual(sd.path, remote_path+'/Photos')
         self.assertTrue(sd.is_dir())
         self.assertIn(rf.id, sd.parentIds)
         self.assertTrue(sd.exists)
@@ -87,12 +91,14 @@ class TestLocal(unittest.TestCase):
         self.assertIsInstance(fp.children[0], LinuxFS)
         self.assertIsNotNone(fp.mimeType())
 
+        fp = LinuxFS(local_path, True)
+        self.assertEqual(fp.path, local_path)
+
 class TestDatabase(unittest.TestCase):
     test_database = 'test_database.sqlite'
-    remote_path = '/sync_dir'
 
     def setUp(self):
-        db.connect(self.test_database, self.remote_path)
+        db.connect(self.test_database, remote_path, local_path)
         fp = LinuxFS("settings.json")
         db.add(fp)
         dp = LinuxFS("gdclient")
@@ -100,7 +106,7 @@ class TestDatabase(unittest.TestCase):
 
         parent, subdir = load_test_responses()
         rr = GDriveFS()
-        rr.set_path_id('/sync_dir', 'test_12345', True)
+        rr.set_path_id(remote_path, 'test_12345', True)
         db.add(rr)
         rf = GDriveFS(parent.get('files')[1], rr.path)
         db.add(rf)
@@ -124,10 +130,7 @@ class TestDatabase(unittest.TestCase):
 
         self.assertFalse(os.path.isfile(self.test_database))
 
-        with self.assertRaises(ValueError):
-            db.connect(self.test_database, None)
-
-        db.connect(self.test_database, self.remote_path)
+        db.connect(self.test_database, remote_path, local_path)
         self.assertFalse(db._db.is_closed())
         self.assertTrue(db.is_empty())
 
@@ -180,7 +183,7 @@ class TestDatabase(unittest.TestCase):
         fp = LinuxFS("settings.json")
         dp = LinuxFS("gdclient")
         rr = GDriveFS()
-        rr.set_path_id('/sync_dir', 'test_12345', True)
+        rr.set_path_id(remote_path, 'test_12345', True)
         parent, subdir = load_test_responses()
         rf = GDriveFS(parent.get('files')[1], rr.path)
         rd = GDriveFS(parent.get('files')[3], rr.path)
@@ -206,7 +209,7 @@ class TestDatabase(unittest.TestCase):
     def test_find_parent(self):
         child = db.get_row_by_id('test_id_1234SVdJZmdZLWxMcUk')
         parent = db._find_db_object_parent_as_file(child)
-        self.assertEqual(parent.path, "/sync_dir/Photos")
+        self.assertEqual(parent.path, remote_path+"/Photos")
         self.assertEqual(parent.id, "12345_photo_folder")
         grandparent = db._find_db_object_parent_as_file(parent)
         self.assertEqual(grandparent.id, "test_12345")
@@ -215,44 +218,56 @@ class TestDatabase(unittest.TestCase):
         fp = LinuxFS("settings.json")
         dp = LinuxFS("gdclient")
         rr = GDriveFS()
-        rr.set_path_id('/sync_dir', 'test_12345', True)
+        rr.set_path_id(remote_path, 'test_12345', True)
         parent, subdir = load_test_responses()
         rf = GDriveFS(parent.get('files')[1], rr.path)
         rd = GDriveFS(parent.get('files')[3], rr.path)
         rdf = GDriveFS(subdir.get('files')[1], rd.path)
 
-        mirror = db.get_mirror(fp)
-        self.assertEqual(mirror.path, '/sync_dir/settings.json')
-        self.assertTrue(mirror.is_file())
-        self.assertIn(rr.id, mirror.parentIds)
-        self.assertFalse(mirror.exists)
-        self.assertIsInstance(mirror, GDriveFS)
-
-        mirror = db.get_mirror(dp)
-        self.assertEqual(mirror.path, '/sync_dir/gdclient')
-        self.assertTrue(mirror.is_dir())
-        self.assertIn(rr.id, mirror.parentIds)
-        self.assertFalse(mirror.exists)
-        self.assertIsInstance(mirror, GDriveFS)
-
         mirror = db.get_mirror(rr)
-        self.assertEqual(mirror.path, '.')
+        self.assertEqual(mirror.path, local_path)
         self.assertTrue(mirror.is_dir())
-        self.assertTrue(mirror.exists)
+        # self.assertTrue(mirror.exists)
         self.assertIsInstance(mirror, LinuxFS)
 
         mirror = db.get_mirror(rd)
-        self.assertEqual(mirror.path, 'Photos')
+        self.assertEqual(mirror.path, local_path+'/Photos')
         self.assertTrue(mirror.is_dir())
         self.assertIsInstance(mirror, LinuxFS)
 
         mirror = db.get_mirror(rdf)
-        self.assertEqual(mirror.path, 'Photos/Sample Photo (5).JPG')
+        self.assertEqual(mirror.path, local_path+'/Photos/Sample Photo (5).JPG')
         self.assertTrue(mirror.is_file())
         self.assertIsInstance(mirror, LinuxFS)
 
-        fp = LinuxFS(".")
+        fp = LinuxFS(local_path, True)
         self.assertTrue(db.mirror_exists(fp))
+
+
+    def test_resolve_mirror_path(self):
+        db.connect(self.test_database, remote_path, local_path)
+        paths = [
+            # Relative Local, Absolute Remote, isDir
+            ("Sync_Dir/Photos/2.jpg", "/Photos/Photos/2.jpg", False),
+            ("Sync_Dir/Photos", "/Photos/Photos", True),
+            ("Sync_Dir/1.jpg", "/Photos/1.jpg", False),
+            (local_path, remote_path, True),
+        ]
+
+        for lpath, rpath, isDir in paths:
+            local   = LinuxFS(lpath, isDir)
+            remote  = GDriveFS()
+            remote.set_path_id(rpath, "testid", isDir)
+
+            self.assertEqual(local.path, lpath)
+            self.assertEqual(remote.path, rpath)
+
+            remote_mirror   = db._db_mirror_from_file(local)
+            local_mirror    = db._db_mirror_from_file(remote)
+
+            self.assertEqual(local_mirror.path, lpath)
+            self.assertEqual(remote_mirror.path, rpath)
+
 
 if __name__ == '__main__':
     unittest.main()

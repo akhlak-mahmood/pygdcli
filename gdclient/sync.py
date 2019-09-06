@@ -46,6 +46,12 @@ class Sync:
     def _process_item(self, item):
         log.say("Checking item: ", item)
 
+        try:
+            mirror = db.get_mirror(item)
+        except ErrorParentNotFound:
+            log.error("No mirror parent directory exists in database.", item)
+            return False
+
         # if it's a directory
         # for each item, check if there is a mirror item exists in db
         # if yes, update status to syncd
@@ -55,21 +61,20 @@ class Sync:
                 log.trace("Mirror directory exists in database. ", item)
                 log.trace("Sync OK:", item)
             else:
-                mirror = db.get_mirror(item)
                 mirror.create_dir()
                 db.add(mirror)
-
-            db.update_status(item, db.Status.synced)
-            db.update_status(mirror, db.Status.synced)
-
         else:
             if db.mirror_exists(item):
-                # @todo: check same file
-                pass
+                if not item.same_file(mirror):
+                    self._sync_file(item, mirror)
             else:
-                #@todo: add to db
-                #upload or download
-                pass
+                response = item.upload_or_download(mirror)
+                # parent path None, since path info is already there
+                mirror.set_object(response, None)
+                db.add(mirror)
+
+        db.update_status(item, db.Status.synced)
+        db.update_status(mirror, db.Status.synced)
 
     def run(self):
         """ Process sync queue """
@@ -80,10 +85,9 @@ class Sync:
 
         log.say("Finish SyncQ")
 
-    def _sync_file(self, item):
+    def _sync_file(self, item, mirror):
         """ Sync the item with it's mirror file. 
             Do extensive checking to modified time to determine sync direction.
             If modification detected in both local and remote, abort syncing. """
 
-        pass 
-    
+        log.trace("Checking sync direction, not implemented")

@@ -135,9 +135,9 @@ class GDriveFS(FileSystem):
             raise ErrorParseResponseObject(self, self.gdFileObject)
 
         # resolve remote path
-        if parent_path is None:
-            log.trace("Undefined parent path, path needs to be resolved.", self)
-            self.path = None
+        # if path is already set, ignore
+        if parent_path is None and self.path is None:
+            raise ErrorPathResolve("Undefined parent path, path needs to be resolved.", self)
         else:
             self.path = os.path.join(parent_path, self.name)
 

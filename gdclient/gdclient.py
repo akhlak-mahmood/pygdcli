@@ -31,7 +31,9 @@ class PyGDClient:
             raise RuntimeError("Failed to detect settings.")
 
         # connect database, setup tables if needed
-        db.connect(self.settings.db_file, self.settings.remote_root_path)
+        db.connect(self.settings.db_file,
+                    self.settings.remote_root_path,
+                    self.settings.local_root_path)
 
         # connect remote server, login
         self.sync = sync.Sync(SCOPES,
@@ -82,7 +84,7 @@ class PyGDClient:
         self.settings.save(self.settings_file)
 
     def build_local_tree(self):
-        self.local_root = LinuxFS(self.settings.local_root_path)
+        self.local_root = LinuxFS(self.settings.local_root_path, True)
         self.local_root.list_dir(recursive=True)
         # self.local_root.print_children()
 
@@ -121,7 +123,7 @@ class PyGDClient:
         self.sync.add(directory)
         db.update_status(directory, db.Status.queued)
 
-        print("Processing ", directory.children)
+        log.trace("Processing children of ", directory.path)
         # add children, recursively
         for child in directory.children:
             if child.is_dir():
@@ -144,7 +146,7 @@ class PyGDClient:
 
         # Start adding items to db and queue for sync
         self._add_sync_recursive(self.local_root)
-        # self._add_sync_recursive(self.remote_root)
+        self._add_sync_recursive(self.remote_root)
     
     def check_updates(self):
         log.say("Checking for changes, not implemented")
@@ -158,6 +160,8 @@ class PyGDClient:
             self.setup_db_tree()
         else:
             self.check_updates()
+
+        # print(self.sync)
 
         # start syncing
         self.sync.run()
