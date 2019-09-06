@@ -109,7 +109,6 @@ class Sync:
                     self._load_queue.append((item,mirror))
                     self._sync_queue.append( (Task.load, item, mirror) )
 
-
     def _execute(self):
         while self._sync_queue:
             task, item, mirror = self._sync_queue.pop(0)
@@ -117,19 +116,12 @@ class Sync:
                 mirror.create_dir()
                 db.add(item)
                 db.add(mirror)
-                db.update_status(item, db.Status.synced)
-                db.update_status(mirror, db.Status.synced)
             elif task == Task.update:
                 self._sync_files(item, mirror)
-                db.update_status(item, db.Status.synced)
-                db.update_status(mirror, db.Status.synced)
             elif task == Task.load:
                 db.add(item)
                 mirror = item.upload_or_download(mirror)
                 db.add(mirror)
-                db.update_status(item, db.Status.synced)
-                db.update_status(mirror, db.Status.synced)
-
 
     def run(self):
         """ Process sync queue """
