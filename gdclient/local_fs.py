@@ -153,7 +153,7 @@ class LinuxFS(FileSystem):
     def gdrive_update(self, remote_file):
         """ Update an existing G Drive file with a local file.
             @todo: update only bytes that changed.
-            """
+        """
 
         if not self.exists:
             ErrorPathNotExists(self)
@@ -190,21 +190,17 @@ class LinuxFS(FileSystem):
 
         if file:
             # update the remote file properties with the response json
-            remote_file.set_object(response)
-
-            # set remote file as mirror of current file
-            self.set_mirror(remote_file)
+            remote_file.set_object(response, None)
 
             # record sync time
             self.syncTime = datetime.now()
             remote_file.syncTime = self.syncTime
 
             log.say("Update successful: ", self.path)
-            return True
         else:
             log.error("Update failed: ", response)
-            return False
 
+        return remote_file
 
     def upload_or_download(self, mirror):
         if not isinstance(mirror, remote_fs.GDriveFS):
@@ -216,3 +212,8 @@ class LinuxFS(FileSystem):
         mirror.set_object(response, None)
 
         return mirror
+
+    def update(self, mirror):
+        if not isinstance(mirror, remote_fs.GDriveFS):
+            raise ErrorNotDriveFSObject(mirror)
+        return self.gdrive_update(mirror)

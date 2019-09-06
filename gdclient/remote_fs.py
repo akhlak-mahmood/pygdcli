@@ -388,6 +388,10 @@ class GDriveFS(FileSystem):
         self.download_to_local(mirror)
         return mirror
 
+    def update(self, mirror):
+        self.download_to_local(mirror)
+        return mirror
+
 
 class GDChanges:
     def __init__(self, last_poll_token=None):
