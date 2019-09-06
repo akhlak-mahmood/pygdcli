@@ -76,10 +76,6 @@ class FileSystem:
         FS_object.mirror = self
 
     def __repr__(self):
-        items = {}
-
-        mirror = self.mirror.id if self.mirror else None
-
         modifiedTime = None
         if self.modifiedTime():
             modifiedTime = self.modifiedTime().strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
@@ -88,12 +84,11 @@ class FileSystem:
         if self.syncTime:
             syncTime = self.syncTime.strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
 
-        # items to save in json database or on print(self)
-        items[self.id] = {
+        items = {
             "directory":    self._is_dir,
             "type":         self.__class__.__name__,
-            "name":         self.name,
-            "mimeType":     self._mimeType,
+            # "name":         self.name,
+            # "mimeType":     self._mimeType,
             "path":         self.path
         }
 
