@@ -9,6 +9,15 @@ from .filesystem import FileSystem
 from .local_fs import LinuxFS
 from .remote_fs import GDriveFS
 
+class Task:
+    create  = 1
+    load    = 2
+    update  = 3
+    delete  = 4
+    trash   = 5
+    rename  = 6
+    copy    = 7
+
 class Sync:
     def __init__(self, scopes, credentials_file, token_file):
         self.scopes = scopes
@@ -16,11 +25,9 @@ class Sync:
         self.token_file = token_file
 
         self.setup_auth()
-        self.login()
 
-        self._queue = []
-        self._upload_or_download_queue = []
-        self._update_queue = []
+        self._check_queue = []
+        self._sync_queue = []
 
     def setup_auth(self):
         auth.set_scopes(self.scopes)
@@ -29,9 +36,7 @@ class Sync:
         auth.authenticate(self.credentials_file, self.token_file)
 
     def __repr__(self):
-        return  "SyncQ items: \n" + "\n".join([str(i) for i in self._queue]) \
-            +   "Load items: \n" + "\n".join([str(i) for i in self._upload_or_download_queue]) \
-            +   "Update items: \n" + "\n".join([str(i) for i in self._update_queue])
+        return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
 
     def add(self, item):
         """ Add an item to sync queue """
@@ -39,16 +44,17 @@ class Sync:
             raise ErrorNotFileSystemObject(item)
 
         # if type and path not in queue
-        if not any(x for x in self._queue if all([x.path == item.path, x.__class__ == item.__class__])):
-            self._queue.append(item)
+        if not any(x for x in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
+            self._check_queue.append(item)
             log.trace("SyncQ (add): ", item)
 
-    def _process_item(self, item):
+    def _check_queue_items(self, item):
         log.say("Checking item: ", item)
 
         try:
             # this will resolve if the path is within
             # local or remote root
+            # mirror doesn't depend on item, only the parent of the mirror
             mirror = db.get_mirror(item)
         except ErrorParentNotFound:
             log.warn("No mirror parent directory exists in database. Might be an untracked item.", item)
@@ -63,13 +69,12 @@ class Sync:
                 log.trace("Directory exists in database. All OK.", item)
             else:
                 log.trace("Adding new directory", item)
-                db.add(item)
                 if db.mirror_exists(item):
                     log.trace("Mirror directory exists in database. ", item)
                     log.trace("Sync OK:", item)
                 else:
-                    mirror.create_dir()
-                    db.add(mirror)
+                    self._directory_queue.append((item, mirror))
+                    self._sync_queue.append( (Task.create, item, mirror) )
         else:
             # database contains all the syncd items
             # check if current file props matches with the saved props
@@ -83,41 +88,63 @@ class Sync:
                     # if already a mirror, sync them
                     if db.mirror_exists(item) and not item.same_file(mirror):
                         self._update_queue.append((item, mirror))
+                        self._sync_queue.append( (Task.update, item, mirror) )
                     else:
                         log.trace("Downloading/Uploading mirror file", item)
-                        self._upload_or_download_queue.append((item,mirror))
-                        # mirror = item.upload_or_download(mirror)
-                        # db.add(mirror)
+                        self._load_queue.append((item,mirror))
+                        self._sync_queue.append( (Task.load, item, mirror) )
                 else:
                     # if no change at all or if a new file
                     log.trace("No change found", item)
             else:
                 log.trace("New file: ", item)
-                db.add(item)
                 if db.mirror_exists(item):
                     if not item.same_file(mirror):
                         self._update_queue.append((item, mirror))
+                        self._sync_queue.append( (Task.update, item, mirror) )
                     else:
                         log.say("No change: ", item.path)
                 else:
                     log.trace("Downloading/Uploading mirror file", item)
-                    self._upload_or_download_queue.append((item,mirror))
-                    # mirror = item.upload_or_download(mirror)
-                    # db.add(mirror)
+                    self._load_queue.append((item,mirror))
+                    self._sync_queue.append( (Task.load, item, mirror) )
 
-        db.update_status(item, db.Status.synced)
-        db.update_status(mirror, db.Status.synced)
+
+    def _execute(self):
+        while self._sync_queue:
+            task, item, mirror = self._sync_queue.pop(0)
+            if task == Task.create:
+                mirror.create_dir()
+                db.add(item)
+                db.add(mirror)
+                db.update_status(item, db.Status.synced)
+                db.update_status(mirror, db.Status.synced)
+            elif task == Task.update:
+                self._sync_files(item, mirror)
+                db.update_status(item, db.Status.synced)
+                db.update_status(mirror, db.Status.synced)
+            elif task == Task.load:
+                db.add(item)
+                mirror = item.upload_or_download(mirror)
+                db.add(mirror)
+                db.update_status(item, db.Status.synced)
+                db.update_status(mirror, db.Status.synced)
+
 
     def run(self):
         """ Process sync queue """
-        log.say("Running SyncQ: ", len(self._queue), "items")
+        log.say("Running SyncQ: ", len(self._check_queue), "items")
 
-        while self._queue:
-            self._process_item(self._queue.pop(0))
+        while self._check_queue:
+            self._check_queue_items(self._check_queue.pop(0))
+
+        if len(self._sync_queue):
+            self.login()
+            self._execute()
 
         log.say("Finish SyncQ")
 
-    def _sync_file(self, item, mirror):
+    def _sync_files(self, item, mirror):
         """ Sync the item with it's mirror file. 
             Do extensive checking to modified time to determine sync direction.
             If modification detected in both local and remote, abort syncing. """
@@ -127,3 +154,28 @@ class Sync:
         iModified = item.modifiedTime()
         mModified = mirror.modifiedTime()
 
+        lmodified = None 
+        rmodified = None
+
+        dbItem = db.get_file_as_db(item)
+        dbMirr = db.get_file_as_db(mirror)
+
+        if iModified > dbItem.modifiedTime():
+            lmodified = True
+        
+        if rmodified > dbMirr.modifiedTime():
+            rmodified = True
+
+        if iModified > mModified:
+            log.say("Uploading ", item.name, " ==> ", mirror.name)
+            if lmodified:
+                item.update(mirror)
+            else:
+                log.error("Could not detect previous local modification time. Aborting upload to avoid possible conflicts and data loss.")
+
+        elif iModified < mModified:
+            log.say("Downloading ", item.name, " <== ", mirror.name)
+            if rmodified:
+                mirror.update(item)
+            else:
+                log.error("Could not detect previous remote modification time. Aborting download to avoid possible conflicts and data loss.")
