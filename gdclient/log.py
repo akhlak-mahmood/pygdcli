@@ -108,6 +108,9 @@ def _formatted(*text):
         if "{" in fmt and "}" in fmt:
             return fmt.format(*args)
         else:
+            # hack to remove extra spaces
+            others = " ".join(args)
+            args = others.split()
             return fmt + " " + " ".join(args)
 
 def trace(*text):
