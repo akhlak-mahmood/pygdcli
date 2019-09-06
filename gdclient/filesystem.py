@@ -22,7 +22,7 @@ class FileSystem:
         self.id = None
         self.children = []
         self.mirror = None
-        self.mimeType = None
+        self._mimeType = None
         self.exists = None
         self._is_dir = None
         self._size = None
@@ -31,7 +31,7 @@ class FileSystem:
     def is_dir(self):
         if self._is_dir is None:
             # self._is_dir must be set for each item explicitely
-            raise ValueError("Object type information (file or directory) not set. ", str(self))
+            raise ValueError("Object type information (file or directory) not set.")
         return self._is_dir
 
     def is_file(self):
@@ -55,6 +55,9 @@ class FileSystem:
     def size(self):
         return self._size
 
+    def mimeType(self):
+        return self._mimeType
+
     def modifiedTime(self):
         raise NotImplementedError()
 
@@ -74,6 +77,7 @@ class FileSystem:
 
     def __repr__(self):
         items = {}
+
         mirror = self.mirror.id if self.mirror else None
 
         modifiedTime = None
@@ -86,20 +90,17 @@ class FileSystem:
 
         # items to save in json database or on print(self)
         items[self.id] = {
+            "directory":    self._is_dir,
             "type":         self.__class__.__name__,
-            "directory":    self.is_dir(),
-            "name":         self.name,              
-            "mimeType":     self.mimeType,          
-            "size":         self.size(),            
-            "modifiedTime": modifiedTime,           
-            "syncTime":     syncTime,              
-            "md5":          self.md5()
+            "name":         self.name,
+            "mimeType":     self._mimeType,
+            "path":         self.path
         }
 
-        return items
+        return str(items)
 
     def __str__(self):
-        return self.__repr__().__str__()
+        return self.__repr__()
 
 
     def print_children(self):
@@ -110,19 +111,6 @@ class FileSystem:
             if child.modifiedTime():
                 modifiedTime = child.modifiedTime().strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
             print("%d   %s \t %s \t\t %s \t %s" %(i+1, child.is_dir(), child.name, child.md5(), modifiedTime))
-
-
-    def tree(self):
-        """ Returns a dictionary containing all the basic properties of a
-            file, and recursively if it's a directory. Can be used to save
-            and load later. """
-        items = self.__repr__()
-
-        if self.is_dir():
-            for child in self.children:
-                items.update(child.tree()) 
-
-        return items
 
     def same_file(self):
         """ Compare a file with it's mirror file. """

@@ -2,6 +2,12 @@ import os
 
 from . import log 
 from . import auth
+from . import database as db 
+
+from .errors import *
+from .filesystem import FileSystem
+from .local_fs import LinuxFS
+from .remote_fs import GDriveFS
 
 class Sync:
     def __init__(self, scopes, credentials_file, token_file):
@@ -12,17 +18,69 @@ class Sync:
         self.setup_auth()
         self.login()
 
+        self.queue = []
+
     def setup_auth(self):
         auth.set_scopes(self.scopes)
 
     def login(self):
         auth.authenticate(self.credentials_file, self.token_file)
 
-    def add(self):
+    def add(self, item):
         """ Add an item to sync queue """
-        pass 
+        if not isinstance(item, FileSystem):
+            raise ErrorNotFileSystemObject(item)
+
+        if not db.file_exists(item):
+            # items added to the queue need to be added to 
+            # the database first.
+            # @todo: remove this check once everything is OK to avoid performance issues
+            raise FileNotFoundError("Not in database: ", item)
+
+        self.queue.append(item)
+        log.trace("SyncQ (add): ", item)
+
+    def _process_item(self, item):
+        log.say("Checking item: ", item)
+
+        # if it's a directory
+        # for each item, check if there is a mirror item exists in db
+        # if yes, update status to syncd
+        # else, create/update the mirror item
+        if item.is_dir():
+            if db.mirror_exists(item):
+                log.trace("Mirror directory exists in database. ", item)
+                log.trace("Sync OK:", item)
+            else:
+                mirror = db.get_mirror(item)
+                mirror.create_dir()
+                db.add(mirror)
+
+            db.update_status(item, db.Status.synced)
+            db.update_status(mirror, db.Status.synced)
+
+        else:
+            if db.mirror_exists(item):
+                # @todo: check same file
+                pass
+            else:
+                #@todo: add to db
+                #upload or download
+                pass
 
     def run(self):
         """ Process sync queue """
-        pass 
+        log.say("Running SyncQ")
 
+        while self.queue:
+            self._process_item(self.queue.pop(0))
+
+        log.say("Finish SyncQ")
+
+    def _sync_file(self, item):
+        """ Sync the item with it's mirror file. 
+            Do extensive checking to modified time to determine sync direction.
+            If modification detected in both local and remote, abort syncing. """
+
+        pass 
+    

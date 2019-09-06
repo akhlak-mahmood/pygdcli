@@ -31,7 +31,7 @@ class PyGDClient:
             raise RuntimeError("Failed to detect settings.")
 
         # connect database, setup tables if needed
-        db.connect(self.settings.db_file)
+        db.connect(self.settings.db_file, self.settings.remote_root_path)
 
         # connect remote server, login
         self.sync = sync.Sync(SCOPES,
@@ -84,6 +84,7 @@ class PyGDClient:
     def build_local_tree(self):
         self.local_root = LinuxFS(self.settings.local_root_path)
         self.local_root.list_dir(recursive=True)
+        # self.local_root.print_children()
 
     def build_remote_tree(self):
         if not 'remote_root_id' in self.settings:
@@ -113,16 +114,23 @@ class PyGDClient:
             raise NotADirectoryError(directory)
 
         # add the directory itself
-        db.add(directory)
+        try:
+            db.add(directory)
+        except:
+            raise RuntimeError("Failed to add ", directory)
         self.sync.add(directory)
         db.update_status(directory, db.Status.queued)
 
+        print("Processing ", directory.children)
         # add children, recursively
         for child in directory.children:
             if child.is_dir():
                 self._add_sync_recursive(child)
             else:
-                db.add(child)
+                try:
+                    db.add(child)
+                except:
+                    raise RuntimeError("Failed to add ", child)
                 self.sync.add(child)
                 db.update_status(child, db.Status.queued)
 
@@ -135,8 +143,8 @@ class PyGDClient:
         self.build_remote_tree()
 
         # Start adding items to db and queue for sync
-        self._add_sync_recursive(self.remote_root)
         self._add_sync_recursive(self.local_root)
+        # self._add_sync_recursive(self.remote_root)
     
     def check_updates(self):
         log.say("Checking for changes, not implemented")
@@ -155,3 +163,4 @@ class PyGDClient:
         self.sync.run()
 
         db.close()
+        self.settings.save(self.settings_file)

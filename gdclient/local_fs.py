@@ -89,14 +89,14 @@ class LinuxFS(FileSystem):
 
         if os.path.isdir(self.path):
             self._is_dir = True
-            self.mimeType = MimeTypes.linux_directory
+            self._mimeType = MimeTypes.linux_directory
         else:
             self._is_dir = False
             mmtype = None
             mmtype, encoding = mimetypes.guess_type(self.path)
             # if not mmtype:
             #     log.trace("Failed mimetype detect: ", self.path)
-            self.mimeType = mmtype
+            self._mimeType = mmtype
 
     def list_dir(self, recursive=False):
         """ Populate self.children list by reading current directory items. """
@@ -136,11 +136,11 @@ class LinuxFS(FileSystem):
             'parents': [remote_directory.id]
         }
 
-        if not self.mimeType:
+        if not self._mimeType:
             self.guess_mimeType()
 
         media = MediaFileUpload(self.path, 
-                mimetype = self.mimeType,
+                mimetype = self._mimeType,
                 chunksize = UPLOAD_CHUNK_SIZE,
                 resumable = True
             )

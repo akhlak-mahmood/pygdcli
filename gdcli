@@ -27,5 +27,7 @@ if len(sys.argv) < 2:
 	print("\tNo settings.json specified.\n")
 	exit(1)
 
-from gdclient import gdcli, cliclient
-gdcli.run(sys.argv[1])
+from gdclient.gdclient import PyGDClient
+gdcli = PyGDClient(sys.argv[1])
+gdcli.run()
+

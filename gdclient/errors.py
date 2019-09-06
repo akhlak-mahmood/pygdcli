@@ -27,3 +27,9 @@ class ErrorIDNotSet(ValueError):
 
 class ErrorNameNotSet(ValueError):
     pass 
+
+class ErrorNotInDatabase(FileNotFoundError):
+    pass 
+
+class ErrorParentNotFound(ErrorPathResolve):
+    pass 

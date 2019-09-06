@@ -23,6 +23,7 @@ class GDriveFS(FileSystem):
         self._modifiedTime = None
         self._md5 = None
         self.parentIds = None
+        self.is_google_doc = None
 
         if gdFileObject:
             if parent_path is None:
@@ -77,6 +78,9 @@ class GDriveFS(FileSystem):
         if not self.exists:
             raise ErrorPathNotExists(self)
 
+        if self._modifiedTime is None:
+            return None
+
         # parse the RFC 3339 time as python datetime with utc timezone
         return dateutil.parser.parse(self._modifiedTime)
 
@@ -84,6 +88,12 @@ class GDriveFS(FileSystem):
         if self.is_dir():
             raise IsADirectoryError(self)
         return self._md5
+
+    def mimeType(self):
+        if self.is_dir():
+            return MimeTypes.gdrive_directory
+        else:
+            return self._mimeType
 
     def set_object(self, gdFileObject, parent_path):
         """ If the file/dir was initialized as an empty object,
@@ -100,11 +110,13 @@ class GDriveFS(FileSystem):
 
     def set_path_id(self, path, idn, is_a_directory):
         """ If the file/dir was initialized as an empty object,
-            set it's name. """
+            set it's path and id number. """
         self.path = path
-        self.id = idn
-        self.exists = True          # exists if id is set
+        if idn:
+            self.id = idn
+            self.exists = True          # exists if id is set
         self._is_dir = is_a_directory
+        self._mimeType = MimeTypes.gdrive_directory
         self.name = os.path.basename(self.path)
 
     def _parse_object(self, parent_path):
@@ -127,11 +139,11 @@ class GDriveFS(FileSystem):
             log.trace("Undefined parent path, path needs to be resolved.", self)
             self.path = None
         else:
-            self.path = os.path.join(parent_path, name)
+            self.path = os.path.join(parent_path, self.name)
 
         self.exists = True
 
-        self.mimeType = self.gdFileObject.get('mimeType')
+        self._mimeType = self.gdFileObject.get('mimeType')
         self._modifiedTime = self.gdFileObject.get('modifiedTime')
 
         # store parents to upload later
@@ -140,7 +152,7 @@ class GDriveFS(FileSystem):
                 self.add_parent_id(p_id)
 
         # set _is_dir properly
-        if self.mimeType == MimeTypes.gdrive_directory:
+        if self._mimeType == MimeTypes.gdrive_directory:
             self._is_dir = True
         else:
             self._is_dir = False
@@ -149,8 +161,11 @@ class GDriveFS(FileSystem):
             try:
                 self._size = int(self.gdFileObject.get('size'))
                 self._md5 = self.gdFileObject.get('md5Checksum')
+                self.is_google_doc = False
             except:
-                raise ErrorParseResponseObject("Can not parse file properties: ", self, self.gdFileObject)
+                # ignore, these files might be google docs
+                #@todo: process google docs
+                self.is_google_doc = True
 
     def add_parent_id(self, parent_id):
         """ A file/dir can have more than one parent directory. """
