@@ -49,7 +49,7 @@ class Sync:
         try:
             mirror = db.get_mirror(item)
         except ErrorParentNotFound:
-            log.error("No mirror parent directory exists in database.", item)
+            log.warn("No mirror parent directory exists in database. Might be a untracked item.", item)
             return False
 
         # if it's a directory
@@ -67,10 +67,10 @@ class Sync:
             if db.mirror_exists(item):
                 if not item.same_file(mirror):
                     self._sync_file(item, mirror)
+                else:
+                    log.say("No change: ", item.path)
             else:
-                response = item.upload_or_download(mirror)
-                # parent path None, since path info is already there
-                mirror.set_object(response, None)
+                mirror = item.upload_or_download(mirror)
                 db.add(mirror)
 
         db.update_status(item, db.Status.synced)
