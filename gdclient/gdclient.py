@@ -148,6 +148,8 @@ class PyGDClient:
             self.build_local_tree()
             self._add_sync_recursive(self.local_root)
 
+            self.sync.login()
+
             # Fetch remote items tree
             self.build_remote_tree()
 
