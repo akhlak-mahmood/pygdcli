@@ -23,6 +23,7 @@ class Sync:
         self.scopes = scopes
         self.credentials_file = credentials_file
         self.token_file = token_file
+        self._login = False
 
         self.setup_auth()
 
@@ -33,7 +34,9 @@ class Sync:
         auth.set_scopes(self.scopes)
 
     def login(self):
-        auth.authenticate(self.credentials_file, self.token_file)
+        if not self._login:
+            auth.authenticate(self.credentials_file, self.token_file)
+            self._login = True
 
     def __repr__(self):
         return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
@@ -46,7 +49,6 @@ class Sync:
         # if type and path not in queue
         if not any(x for x in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
             self._check_queue.append(item)
-            log.trace("SyncQ (add): ", item)
 
     def _check_queue_items(self, item):
         log.say("Checking item: ", item)
@@ -73,7 +75,6 @@ class Sync:
                     log.trace("Mirror directory exists in database. ", item)
                     log.trace("Sync OK:", item)
                 else:
-                    self._directory_queue.append((item, mirror))
                     self._sync_queue.append( (Task.create, item, mirror) )
         else:
             # database contains all the syncd items
@@ -87,11 +88,9 @@ class Sync:
                     log.trace("Change found", item)
                     # if already a mirror, sync them
                     if db.mirror_exists(item) and not item.same_file(mirror):
-                        self._update_queue.append((item, mirror))
                         self._sync_queue.append( (Task.update, item, mirror) )
                     else:
                         log.trace("Downloading/Uploading mirror file", item)
-                        self._load_queue.append((item,mirror))
                         self._sync_queue.append( (Task.load, item, mirror) )
                 else:
                     # if no change at all or if a new file
@@ -100,24 +99,25 @@ class Sync:
                 log.trace("New file: ", item)
                 if db.mirror_exists(item):
                     if not item.same_file(mirror):
-                        self._update_queue.append((item, mirror))
                         self._sync_queue.append( (Task.update, item, mirror) )
                     else:
                         log.say("No change: ", item.path)
                 else:
                     log.trace("Downloading/Uploading mirror file", item)
-                    self._load_queue.append((item,mirror))
                     self._sync_queue.append( (Task.load, item, mirror) )
 
     def _execute(self):
         while self._sync_queue:
             task, item, mirror = self._sync_queue.pop(0)
+
             if task == Task.create:
                 mirror.create_dir()
                 db.add(item)
                 db.add(mirror)
+
             elif task == Task.update:
                 self._sync_files(item, mirror)
+
             elif task == Task.load:
                 db.add(item)
                 mirror = item.upload_or_download(mirror)
