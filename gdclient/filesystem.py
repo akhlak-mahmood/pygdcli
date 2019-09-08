@@ -28,6 +28,7 @@ class FileSystem:
         self._md5 = None
         self._mimeType = None
         self._modifiedTime = None
+        self.trashed = False
 
     def is_dir(self):
         if self._is_dir is None:
@@ -111,3 +112,7 @@ class FileSystem:
 
     def update(self, mirror):
         raise NotImplementedError()
+
+    def remove(self):
+        raise NotImplementedError()
+
