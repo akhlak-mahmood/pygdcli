@@ -91,7 +91,7 @@ class FileSystem:
         """ Compare a file with it's mirror file. """
 
         if self.is_dir():
-            raise TypeError("Can not compare directory", self)
+            return self.path == mirror.path
 
         if not isinstance(mirror, FileSystem):
             raise TypeError("Mirror is not a FileSystem object", mirror)
