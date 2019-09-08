@@ -53,6 +53,8 @@ class Sync:
 
         # calculate mirror path
         mirror = db.calculate_mirror(item)
+        if mirror is None:
+            return None
         qmirrors = [x for x in self._check_queue if all([x.path == mirror.path, x.__class__ == mirror.__class__])]
         Qmirror = qmirrors[0] if len(qmirrors) else None
         try:

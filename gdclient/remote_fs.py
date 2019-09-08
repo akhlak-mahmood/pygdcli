@@ -135,7 +135,7 @@ class GDriveFS(FileSystem):
         # if path is already set, ignore
         if self.path is None:
             if parent_path is None:
-                log.warn("Undefined parent path, path needs to be resolved.", self)
+                log.warn("Undefined parent path, path needs to be resolved.")
             else:
                 self.path = os.path.join(parent_path, self.name)
 

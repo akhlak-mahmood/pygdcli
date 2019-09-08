@@ -75,13 +75,22 @@ def connect(database_file, remote_root_path, local_root_path):
 
 
 #@todo: rewrite these db functions for better performance
+def _try_path_resolve(fileObj):
+	name = fileObj.name 
+	if isinstance(fileObj, GDriveFS):
+		parentIds = fileObj.parentIds
+	try:
+		parent = get_file_by_id(parentIds[0])
+		return os.path.join(parent.path, name)
+	except:
+		raise ErrorPathResolve(fileObj)
 
 def _db_object_from_file(fileObj):
 	if not isinstance(fileObj, filesystem.FileSystem):
 		raise ErrorNotFileSystemObject(fileObj)
 
 	if fileObj.path is None:
-		raise ErrorPathResolve(fileObj)
+		fileObj.path = _try_path_resolve(fileObj)
 
 	fp = Record()
 
@@ -189,8 +198,12 @@ def is_empty():
 	return Record.select().limit(1).count() == 0
 
 def file_exists(item):
-	dbObj = _db_object_from_file(item)
-	return _get_rows(dbObj).count() > 0
+	try:
+		dbObj = _db_object_from_file(item)
+	except ErrorPathResolve:
+		return False
+	results = _get_rows(dbObj)
+	return results.count() > 0
 
 def get_file_as_db(item):
 	""" Return a db object with info as saved in database. """
@@ -238,8 +251,11 @@ def _db_mirror_from_file(item):
 	return mirror
 
 def calculate_mirror(item):
-	mirror = _db_mirror_from_file(item)
-	return _bare_file_object_from_db(mirror)
+	try:
+		mirror = _db_mirror_from_file(item)
+		return _bare_file_object_from_db(mirror)
+	except ErrorPathResolve:
+		return None
 
 def _find_db_object_parent_as_file(dbObj):
 	if not isinstance(dbObj, Record):
