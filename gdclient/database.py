@@ -237,6 +237,10 @@ def _db_mirror_from_file(item):
 	mirror.deleted = False
 	return mirror
 
+def calculate_mirror(item):
+	mirror = _db_mirror_from_file(item)
+	return _bare_file_object_from_db(mirror)
+
 def _find_db_object_parent_as_file(dbObj):
 	if not isinstance(dbObj, Record):
 		dbObj = _db_object_from_file(dbObj)
