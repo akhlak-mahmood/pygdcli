@@ -45,25 +45,24 @@ class Sync:
             raise ErrorNotFileSystemObject(item)
 
         # if type and path not in queue
-        if not any(x for x, y in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
+        if not any(x for x in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
             self._check_queue.append(item)
 
     def get_Qmirror(self, item):
-        """ Return and remove the mirror from the queue if exists. """
-        if isinstance(item, LinuxFS):
-            mirrors = [x for x in self._check_queue if all([x.path == item.path, x.__class__ == GDriveFS])]
-        elif isinstance(item, GDriveFS):
-            mirrors = [x for x in self._check_queue if all([x.path == item.path, x.__class__ == LinuxFS])]
+        """ Return and remove the mirror item from the queue if exists. """
 
-        mirror = mirrors[0] if len(mirrors) else None
+        # calculate mirror path
+        mirror = db.calculate_mirror(item)
+        qmirrors = [x for x in self._check_queue if all([x.path == mirror.path, x.__class__ == mirror.__class__])]
+        Qmirror = qmirrors[0] if len(qmirrors) else None
         try:
             # remove mirror from queue to avoid double handling
-            self._check_queue.remove(mirror)
+            self._check_queue.remove(Qmirror)
         except:
             # "easier to ask for forgiveness than permission"
             pass
 
-        return mirror
+        return Qmirror
 
     def _check_queue_items(self, item):
         """ Check an item for update, creation etc and set to
