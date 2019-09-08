@@ -135,7 +135,7 @@ class GDriveFS(FileSystem):
         # if path is already set, ignore
         if self.path is None:
             if parent_path is None:
-                raise ErrorPathResolve("Undefined parent path, path needs to be resolved.", self)
+                log.warn("Undefined parent path, path needs to be resolved.", self)
             else:
                 self.path = os.path.join(parent_path, self.name)
 
@@ -152,6 +152,8 @@ class GDriveFS(FileSystem):
             self._is_dir = True
         else:
             self._is_dir = False
+
+        self.trashed = self.gdFileObject.get('trashed')
 
         if self.is_file():
             try:
@@ -396,7 +398,7 @@ class GDriveFS(FileSystem):
 
 class GDChanges:
     def __init__(self, last_poll_token=None):
-        self._changed_items = {}
+        self._changed_items = []
         if last_poll_token:
             self.startPageToken = last_poll_token
         else:
@@ -415,14 +417,13 @@ class GDChanges:
                             fields=CHFIELDS
                 ).execute()
             for change in response.get('changes'):
-                idn = change.get('file').get('id')
-                if idn is None:
-                    raise RuntimeError("Response file object doesn't have an ID.")
                 log.say('Change found for file: %s' % change.get('file').get('name'))
-                self._changed_items[idn] = GDriveFS()
+                item = GDriveFS()
 
                 # setting parent as None, which needs to be resolved
-                self._changed_items[idn].set_object(change.get('file'), None)
+                item.set_object(change.get('file'), None)
+
+                self._changed_items.append(item)
 
             if 'newStartPageToken' in response:
                 # Last page, save this token for the next polling interval
@@ -431,7 +432,7 @@ class GDChanges:
             page_token = response.get('nextPageToken')
 
     def fetch(self):
-        self._changed_items = {}
+        self._changed_items = []
         self._retrieve_changes()
         return self._changed_items
 
