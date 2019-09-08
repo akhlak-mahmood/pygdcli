@@ -160,16 +160,15 @@ class PyGDClient:
             queue for processing. """
 
         count = 0
-        dG = GDChanges(self.settings.get('last_changes_token'))
+        dG = GDChanges(self.settings.get('lastChangeToken'))
         for remote_change in dG.fetch():
             self.sync.add(remote_change)
             count += 1
         log.say("%d remote file changes found." %count)
-        self.settings.last_changes_token = dG.last_poll_token()
+        self.settings.lastChangeToken = dG.last_poll_token()
 
     def run(self):
 
-        self.sync.login()
 
         if db.is_empty():
             # Assuming nothing exists in the db
@@ -181,6 +180,7 @@ class PyGDClient:
             self._add_sync_recursive(self.local_root)
 
             # Fetch remote items tree
+            self.sync.login()
             self.build_remote_tree()
 
             # recursively add all remote files to queue
@@ -195,9 +195,8 @@ class PyGDClient:
             self._add_sync_database()
 
             # fetch remote changes and add to queue
+            self.sync.login()
             self._add_sync_remote_changes()
-
-        # print(self.sync)
 
         # start syncing
         self.sync.run()
