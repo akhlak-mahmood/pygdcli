@@ -40,7 +40,7 @@ class Sync:
         return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
         
     def add(self, item):
-        """ Add an item to sync queue """
+        """ Add an item to sync queue for checking """
         if not isinstance(item, FileSystem):
             raise ErrorNotFileSystemObject(item)
 
@@ -49,6 +49,7 @@ class Sync:
             self._check_queue.append(item)
 
     def get_Qmirror(self, item):
+        """ Return and remove the mirror from the queue if exists. """
         if isinstance(item, LinuxFS):
             mirrors = [x for x in self._check_queue if all([x.path == item.path, x.__class__ == GDriveFS])]
         elif isinstance(item, GDriveFS):
@@ -65,6 +66,8 @@ class Sync:
         return mirror
 
     def _check_queue_items(self, item):
+        """ Check an item for update, creation etc and set to
+            corresponding task queue. """
         if db.file_exists(item):
             # change, no change, delete
             dbFile = db.get_file_as_db(item)
@@ -74,24 +77,20 @@ class Sync:
                 if Qmirror:
                     # change in both local and remote
                     if item.same_file(Qmirror):
-                        # same change!!
+                        # same in both local and remote
+                        # no further processing needed
                         db.update(item)
                         db.update(Qmirror)
                     else:
                         # different changes in local and mirror
-                        self.resolve_conflict(item, Qmirror)
+                        self._sync_queue.append((Task.conflict, item, Qmirror))
                 else:
                     # delete in either local or remote
                     if item.trashed:
-                        db.remove(item)
-                        if db.mirror_exists(item):
-                            mirror = db.get_mirror()
-                            mirror.remove()
-                            db.remove(mirror)
+                        self._sync_queue.append((Task.delete, item, None))
                     else:
                         # change
-                        mirror = db.get_mirror(item)
-                        self._sync_files(item, mirror)
+                        self._sync_queue.append((Task.update, item, None))
         else:
             # new file, new setup
             Qmirror = self.get_Qmirror(item)
@@ -99,23 +98,23 @@ class Sync:
                 # item both in local and remote
                 if item.same_file(Qmirror):
                     # same in both local and remote
+                    # no further processing needed
                     db.add(item)
                     db.add(Qmirror)
                 else:
                     # different version
-                    self.resolve_conflict(item, Qmirror)
-                    db.add(item)
-                    db.add(Qmirror)
+                    self._sync_queue.append((Task.conflict, item, Qmirror))
             else:
-                # new file
-                mirror = db.get_mirror(item)
-                item.upload_or_download(mirror)
-                db.add(item)
-                db.add(mirror)
+                # new file or directory
+                if item.is_file():
+                    self._sync_queue.append((Task.load, item, None))
+                else:
+                    self._sync_queue.append((Task.create, item, None))
 
     def _execute(self):
+        """ Run the set task for the queue items. """
         while self._sync_queue:
-            task, item = self._sync_queue.pop(0)
+            task, item, Qmirror = self._sync_queue.pop(0)
 
             try:
                 mirror = db.get_mirror(item)
@@ -135,6 +134,18 @@ class Sync:
                 db.add(item)
                 mirror = item.upload_or_download(mirror)
                 db.add(mirror)
+
+            elif task == Task.delete:
+                db.remove(item)
+                if db.mirror_exists(item):
+                    mirror.remove()
+                    db.remove(mirror)
+
+            elif task == Task.conflict:
+                self.resolve_conflict(item, Qmirror)
+                # db.add(item)
+                # db.add(Qmirror)
+
 
     def run(self):
         """ Process sync queue """
