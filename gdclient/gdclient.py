@@ -178,13 +178,13 @@ class PyGDClient:
             # recursively check the local files
             self.build_local_tree()
             self._add_sync_recursive(self.local_root)
+            db.add(self.local_root)
 
             # Fetch remote items tree
             self.sync.login()
             self.build_remote_tree()
-
-            # recursively add all remote files to queue
             self._add_sync_recursive(self.remote_root)
+            db.add(self.remote_root)
         else:
             log.say("Checking for changes.")
             # recursively check the local files
