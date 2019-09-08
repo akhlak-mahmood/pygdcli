@@ -117,25 +117,42 @@ class PyGDClient:
 
         log.trace("Processing directory ", directory.path)
 
-        self.sync.add(directory)
-        db.update_status(directory, db.Status.queued)
+        if not db.file_exists(directory):
+            self.sync.add(directory)
+            db.update_status(directory, db.Status.queued)
 
         # add children, recursively
         for child in directory.children:
             if child.is_dir():
                 self._add_sync_recursive(child)
             else:
-                self.sync.add(child)
-                db.update_status(child, db.Status.queued)
+                if not db.file_exists(child):
+                    self.sync.add(child)
+                    db.update_status(child, db.Status.queued)
 
     def _add_sync_database(self):
-        for fp in db.get_all_items():
-            self.sync.add(fp)
-        log.trace("Added database items to SyncQ")
+        count = 0
+        for item in db.get_all_local():
+            dbFile = db.get_file_as_db(item)
+            if item.exists:
+                if not item.same_file(dbFile):
+                    self.sync.add(item)
+                    count += 1
+            else:
+                item.trashed = True
+                self.sync.add(item)
+                count += 1
+
+        log.say("%d local file changes found." %count)
 
     def _add_sync_remote_changes(self):
-        log.trace("Added reported remote changes to SyncQ, not implemented")
-        pass
+        count = 0
+        dG = GDChanges(self.settings.get('last_changes_token'))
+        for remote_change in dG.fetch():
+            self.sync.add(remote_change)
+            count += 1
+        log.say("%d remote file changes found." %count)
+        self.settings.last_changes_token = dG.last_poll_token()
 
     def run(self):
 
@@ -152,9 +169,6 @@ class PyGDClient:
 
             # Fetch remote items tree
             self.build_remote_tree()
-
-            db.add(self.local_root)
-            db.add(self.remote_root)
 
             # recursively add all remote files to queue
             self._add_sync_recursive(self.remote_root)

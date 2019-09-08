@@ -10,13 +10,11 @@ from .local_fs import LinuxFS
 from .remote_fs import GDriveFS
 
 class Task:
-    create  = 1
-    load    = 2
-    update  = 3
-    delete  = 4
-    trash   = 5
-    rename  = 6
-    copy    = 7
+    create      = 1
+    load        = 2
+    update      = 3
+    delete      = 4
+    conflict    = 5
 
 class Sync:
     def __init__(self, scopes, credentials_file, token_file):
@@ -41,66 +39,79 @@ class Sync:
     def __repr__(self):
         return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
         
-
     def add(self, item):
         """ Add an item to sync queue """
         if not isinstance(item, FileSystem):
             raise ErrorNotFileSystemObject(item)
 
         # if type and path not in queue
-        if not any(x for x in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
+        if not any(x for x, y in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
             self._check_queue.append(item)
 
-    def _check_queue_items(self, item):
-        # if it's a directory
-        # check if there is a mirror item exists in db
-        # if yes, update status to syncd
-        # else, create the mirror directory
-        if item.is_dir():
-            if not db.file_exists(item):
-                log.trace("New directory:", item)
-                if db.mirror_exists(item):
-                    log.trace("Mirror directory exists in database. ", item)
-                    log.trace("Sync OK:", item)
-                else:
-                    # directories need to be created first before their children
-                    self._sync_queue.append( (Task.create, item) )
-        else:
-            # database contains all the syncd items
-            # check if current file props matches with the saved props
-            if db.file_exists(item):
-                # get the file info as saved in database
-                dbFile = db.get_file_as_db(item)
+    def get_Qmirror(self, item):
+        if isinstance(item, LinuxFS):
+            mirrors = [x for x in self._check_queue if all([x.path == item.path, x.__class__ == GDriveFS])]
+        elif isinstance(item, GDriveFS):
+            mirrors = [x for x in self._check_queue if all([x.path == item.path, x.__class__ == LinuxFS])]
 
-                # check if file props are still same
-                if not item.same_file(dbFile):
-                    log.say("File changed:", item)
-                    # if already a mirror, sync them
-                    if db.mirror_exists(item): 
+        mirror = mirrors[0] if len(mirrors) else None
+        try:
+            # remove mirror from queue to avoid double handling
+            self._check_queue.remove(mirror)
+        except:
+            # "easier to ask for forgiveness than permission"
+            pass
+
+        return mirror
+
+    def _check_queue_items(self, item):
+        if db.file_exists(item):
+            # change, no change, delete
+            dbFile = db.get_file_as_db(item)
+            if not item.same_file(dbFile):
+                # change or delete
+                Qmirror = self.get_Qmirror(item)
+                if Qmirror:
+                    # change in both local and remote
+                    if item.same_file(Qmirror):
+                        # same change!!
+                        db.update(item)
+                        db.update(Qmirror)
+                    else:
+                        # different changes in local and mirror
+                        self.resolve_conflict(item, Qmirror)
+                else:
+                    # delete in either local or remote
+                    if item.trashed:
+                        db.remove(item)
+                        if db.mirror_exists(item):
+                            mirror = db.get_mirror()
+                            mirror.remove()
+                            db.remove(mirror)
+                    else:
+                        # change
                         mirror = db.get_mirror(item)
-                        if not item.same_file(mirror):
-                            log.say("Mirror changed:", item)
-                            self._sync_queue.append( (Task.update, item) )
-                    else:
-                        log.trace("Downloading/Uploading mirror file", item)
-                        self._sync_queue.append( (Task.load, item) )
+                        self._sync_files(item, mirror)
+        else:
+            # new file, new setup
+            Qmirror = self.get_Qmirror(item)
+            if Qmirror:
+                # item both in local and remote
+                if item.same_file(Qmirror):
+                    # same in both local and remote
+                    db.add(item)
+                    db.add(Qmirror)
                 else:
-                    # if no change at all or if a new file
-                    # log.trace("No change found", item)
-                    pass
+                    # different version
+                    self.resolve_conflict(item, Qmirror)
+                    db.add(item)
+                    db.add(Qmirror)
             else:
-                log.trace("New file:", item)
-                if db.mirror_exists(item):
-                    mirror = db.get_mirror(item)
-                    if not item.same_file(mirror):
-                        log.say("Mirror changed:", item)
-                        self._sync_queue.append( (Task.update, item) )
-                    else:
-                        # log.trace("No change: ", item.path)
-                        pass
-                else:
-                    log.say("Download/Upload:", item)
-                    self._sync_queue.append( (Task.load, item) )
+                # new file
+                mirror = db.get_mirror(item)
+                item.upload_or_download(mirror)
+                db.add(item)
+                db.add(mirror)
 
     def _execute(self):
         while self._sync_queue:
@@ -172,3 +183,7 @@ class Sync:
                 mirror.update(item)
             else:
                 log.error("Could not detect previous remote modification time. Aborting download to avoid possible conflicts and data loss.")
+
+    def resolve_conflict(self, item, mirror):
+        log.warn("Conflict between", item, "and", mirror, "NOT IMPLEMENTED")
+        return
