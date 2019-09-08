@@ -40,6 +40,7 @@ class Sync:
 
     def __repr__(self):
         return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
+        
 
     def add(self, item):
         """ Add an item to sync queue """
@@ -51,31 +52,19 @@ class Sync:
             self._check_queue.append(item)
 
     def _check_queue_items(self, item):
-        log.say("Checking item: ", item)
-
-        try:
-            # this will resolve if the path is within
-            # local or remote root
-            # mirror doesn't depend on item, only the parent of the mirror
-            mirror = db.get_mirror(item)
-        except ErrorParentNotFound:
-            log.warn("No mirror parent directory exists in database. Might be an untracked item.", item)
-            return False
-
         # if it's a directory
         # check if there is a mirror item exists in db
         # if yes, update status to syncd
         # else, create the mirror directory
         if item.is_dir():
-            if db.file_exists(item):
-                log.trace("Directory exists in database. All OK.", item)
-            else:
-                log.trace("Adding new directory", item)
+            if not db.file_exists(item):
+                log.trace("New directory:", item)
                 if db.mirror_exists(item):
                     log.trace("Mirror directory exists in database. ", item)
                     log.trace("Sync OK:", item)
                 else:
-                    self._sync_queue.append( (Task.create, item, mirror) )
+                    # directories need to be created first before their children
+                    self._sync_queue.append( (Task.create, item) )
         else:
             # database contains all the syncd items
             # check if current file props matches with the saved props
@@ -85,30 +74,43 @@ class Sync:
 
                 # check if file props are still same
                 if not item.same_file(dbFile):
-                    log.trace("Change found", item)
+                    log.say("File changed:", item)
                     # if already a mirror, sync them
-                    if db.mirror_exists(item) and not item.same_file(mirror):
-                        self._sync_queue.append( (Task.update, item, mirror) )
+                    if db.mirror_exists(item): 
+                        mirror = db.get_mirror(item)
+                        if not item.same_file(mirror):
+                            log.say("Mirror changed:", item)
+                            self._sync_queue.append( (Task.update, item) )
                     else:
                         log.trace("Downloading/Uploading mirror file", item)
-                        self._sync_queue.append( (Task.load, item, mirror) )
+                        self._sync_queue.append( (Task.load, item) )
                 else:
                     # if no change at all or if a new file
-                    log.trace("No change found", item)
+                    # log.trace("No change found", item)
+                    pass
             else:
-                log.trace("New file: ", item)
+                log.trace("New file:", item)
                 if db.mirror_exists(item):
+                    mirror = db.get_mirror(item)
                     if not item.same_file(mirror):
-                        self._sync_queue.append( (Task.update, item, mirror) )
+                        log.say("Mirror changed:", item)
+                        self._sync_queue.append( (Task.update, item) )
                     else:
-                        log.say("No change: ", item.path)
+                        # log.trace("No change: ", item.path)
+                        pass
                 else:
-                    log.trace("Downloading/Uploading mirror file", item)
-                    self._sync_queue.append( (Task.load, item, mirror) )
+                    log.say("Download/Upload:", item)
+                    self._sync_queue.append( (Task.load, item) )
 
     def _execute(self):
         while self._sync_queue:
-            task, item, mirror = self._sync_queue.pop(0)
+            task, item = self._sync_queue.pop(0)
+
+            try:
+                mirror = db.get_mirror(item)
+            except ErrorParentNotFound:
+                log.warn("No mirror parent directory exists in database. Might be an untracked item.", item)
+                continue
 
             if task == Task.create:
                 mirror.create_dir()
@@ -130,9 +132,9 @@ class Sync:
         while self._check_queue:
             self._check_queue_items(self._check_queue.pop(0))
 
-        if len(self._sync_queue):
-            self.login()
-            self._execute()
+        # if len(self._sync_queue):
+        #     self.login()
+        #     self._execute()
 
         log.say("Finish SyncQ")
 
@@ -141,7 +143,6 @@ class Sync:
             Do extensive checking to modified time to determine sync direction.
             If modification detected in both local and remote, abort syncing. """
         log.trace("Syncing", item, " and ", mirror)
-        log.trace("Checking sync direction, not implemented")
 
         iModified = item.modifiedTime()
         mModified = mirror.modifiedTime()
