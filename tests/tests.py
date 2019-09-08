@@ -139,7 +139,7 @@ class TestDatabase(unittest.TestCase):
         fp = LinuxFS("settings.json")
         dbObj = db._db_object_from_file(fp)
 
-        self.assertIsInstance(dbObj, db.File)
+        self.assertIsInstance(dbObj, db.Record)
         self.assertEqual(fp.path, dbObj.path)
         self.assertIsNotNone(dbObj.is_dir)
         self.assertEqual(dbObj.is_dir, fp.is_dir())
@@ -164,7 +164,7 @@ class TestDatabase(unittest.TestCase):
 
         dbObj = db._db_object_from_file(fp)
 
-        self.assertIsInstance(dbObj, db.File)
+        self.assertIsInstance(dbObj, db.Record)
         self.assertEqual(fp.path, dbObj.path)
         self.assertIsNotNone(dbObj.is_dir)
         self.assertEqual(dbObj.is_dir, fp.is_dir())
