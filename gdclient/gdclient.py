@@ -84,11 +84,15 @@ class PyGDClient:
         self.settings.save(self.settings_file)
 
     def build_local_tree(self):
+        """ Recursively build tree of local sync directory. """
+
         self.local_root = LinuxFS(self.settings.local_root_path, True)
         self.local_root.list_dir(recursive=True)
         # self.local_root.print_children()
 
     def build_remote_tree(self):
+        """ Recursively build tree of remote sync directory. """
+
         if not 'remote_root_id' in self.settings:
             log.say("Resolving remote root path ", self.settings.remote_root_path)
             self.remote_root = GDriveFS.remote_path_object(self.settings.remote_root_path)
@@ -109,6 +113,9 @@ class PyGDClient:
         self.remote_root.print_children()
 
     def _add_sync_recursive(self, directory):
+        """ Recursively go over directory contents and add
+            to sync queue for processing. """
+
         if not isinstance(directory, filesystem.FileSystem):
             raise ErrorNotFileSystemObject(directory)
 
@@ -131,6 +138,9 @@ class PyGDClient:
                     db.update_status(child, db.Status.queued)
 
     def _add_sync_database(self):
+        """ Load all local items from database and add to 
+            sync queue if change detected. """
+
         count = 0
         for item in db.get_all_local():
             dbFile = db.get_file_as_db(item)
@@ -146,6 +156,9 @@ class PyGDClient:
         log.say("%d local file changes found." %count)
 
     def _add_sync_remote_changes(self):
+        """ Fetch the remote changes and add to sync 
+            queue for processing. """
+            
         count = 0
         dG = GDChanges(self.settings.get('last_changes_token'))
         for remote_change in dG.fetch():
