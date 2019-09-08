@@ -195,14 +195,16 @@ def remove(item):
 	log.trace("Record set to deleted in database:", item)
 
 def is_empty():
-	return Record.select().limit(1).count() == 0
+	return Record.select().limit(10).count() < 3
 
 def file_exists(item):
-	try:
-		dbObj = _db_object_from_file(item)
-	except ErrorPathResolve:
-		return False
-	results = _get_rows(dbObj)
+	fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
+	results = Record.select().where(
+		(Record.path == item.path) &
+		(Record.is_dir == item.is_dir()) &
+		(Record.fstype == fstype) &
+		(Record.deleted == False)
+	)
 	return results.count() > 0
 
 def get_file_as_db(item):
