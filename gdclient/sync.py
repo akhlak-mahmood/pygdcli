@@ -10,6 +10,7 @@ from .local_fs import LinuxFS
 from .remote_fs import GDriveFS
 
 class Task:
+    nochange    = 0
     create      = 1
     load        = 2
     update      = 3
@@ -52,6 +53,7 @@ class Sync:
         """ Return and remove the mirror item from the queue if exists. """
 
         # calculate mirror path
+        #@todo: raise from calc()
         mirror = db.calculate_mirror(item)
         if mirror is None:
             return None
@@ -80,11 +82,13 @@ class Sync:
                     if item.same_file(Qmirror):
                         # same in both local and remote
                         # no further processing needed
-                        db.update(item)
-                        db.update(Qmirror)
+                        self._sync_queue.append((Task.nochange, item, Qmirror))
                     else:
                         # different changes in local and mirror
-                        self._sync_queue.append((Task.conflict, item, Qmirror))
+                        if item.is_file():
+                            self._sync_queue.append((Task.conflict, item, Qmirror))
+                        else:
+                            self._sync_queue.append((Task.nochange, item, Qmirror))
                 else:
                     # delete in either local or remote
                     if item.trashed:
@@ -100,11 +104,13 @@ class Sync:
                 if item.same_file(Qmirror):
                     # same in both local and remote
                     # no further processing needed
-                    db.add(item)
-                    db.add(Qmirror)
+                    self._sync_queue.append((Task.nochange, item, Qmirror))
                 else:
                     # different version
-                    self._sync_queue.append((Task.conflict, item, Qmirror))
+                    if item.is_file():
+                        self._sync_queue.append((Task.conflict, item, Qmirror))
+                    else:
+                        self._sync_queue.append((Task.nochange, item, Qmirror))
             else:
                 # new file or directory
                 if item.is_file():
@@ -146,6 +152,9 @@ class Sync:
                 self.resolve_conflict(item, Qmirror)
                 # db.add(item)
                 # db.add(Qmirror)
+            else:
+                db.add(item)
+                db.add(Qmirror)
 
 
     def run(self):
