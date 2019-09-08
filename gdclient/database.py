@@ -26,7 +26,7 @@ class BaseModel(Model):
 	class Meta:
 		database = _db
 
-class File(BaseModel):
+class Record(BaseModel):
 	# Basename of the file
 	name 		= CharField(max_length=256)
 
@@ -70,7 +70,7 @@ def connect(database_file, remote_root_path, local_root_path):
 	if _db.is_closed():
 		_db.init(database_file)
 		_db.connect()
-		_db.create_tables([File])
+		_db.create_tables([Record])
 		log.say("Database connect OK:", database_file)
 
 
@@ -83,7 +83,7 @@ def _db_object_from_file(fileObj):
 	if fileObj.path is None:
 		raise ErrorPathResolve(fileObj)
 
-	fp = File()
+	fp = Record()
 
 	if isinstance(fileObj, LinuxFS):
 		fp.fstype = FileType.LinuxFS
@@ -117,25 +117,25 @@ def _bare_file_object_from_db(dbObj):
 	return fp
 
 def _file_object_from_db(dbObj):
-	dbFile = _bare_file_object_from_db(dbObj)
-	dbFile.id = dbObj.id_str
-	dbFile.path = dbObj.path 
-	dbFile.name = dbObj.name
-	dbFile._md5 = dbObj.md5
-	dbFile._size = dbObj.size
-	dbFile._is_dir = dbObj.is_dir
-	dbFile.syncTime = dbObj.time_updated
-	dbFile._mimeType = dbObj.mimeType
-	dbFile._modifiedTime = dbObj.time_modified
-	return dbFile
+	dbRecord = _bare_file_object_from_db(dbObj)
+	dbRecord.id = dbObj.id_str
+	dbRecord.path = dbObj.path 
+	dbRecord.name = dbObj.name
+	dbRecord._md5 = dbObj.md5
+	dbRecord._size = dbObj.size
+	dbRecord._is_dir = dbObj.is_dir
+	dbRecord.syncTime = dbObj.time_updated
+	dbRecord._mimeType = dbObj.mimeType
+	dbRecord._modifiedTime = dbObj.time_modified
+	return dbRecord
 
 
 def _get_rows(dbObj):
-	return File.select().where(
-				(File.path == dbObj.path) &
-				(File.is_dir == dbObj.is_dir) &
-				(File.fstype == dbObj.fstype) &
-				(File.deleted == False)
+	return Record.select().where(
+				(Record.path == dbObj.path) &
+				(Record.is_dir == dbObj.is_dir) &
+				(Record.fstype == dbObj.fstype) &
+				(Record.deleted == False)
 			)
 
 def add(item):
@@ -150,8 +150,43 @@ def add(item):
 		log.trace("Database add OK: ", item)
 		return True
 
+def update(item):
+	fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
+	query = Record.update(
+				name=item.name,
+				id_str=item.id,
+				md5=item.md5(),
+				size=item.size(),
+				mimeType=item.mimeType(),
+				status=Status.synced,
+				time_updated=datetime.utcnow(),
+				time_modified=item.modifiedTime()
+			).where(
+				(Record.path == item.path) &
+				(Record.is_dir == item.is_dir()) &
+				(Record.fstype == fstype) &
+				(Record.deleted == False)
+			)
+	query.execute()
+	log.trace("Record updated in database:", item)
+
+def remove(item):
+	fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
+	query = Record.update(
+				deleted=True,
+				status=Status.synced,
+				time_updated=datetime.utcnow(),
+			).where(
+				(Record.path == item.path) &
+				(Record.is_dir == item.is_dir()) &
+				(Record.fstype == fstype) &
+				(Record.deleted == False)
+			)
+	query.execute()
+	log.trace("Record set to deleted in database:", item)
+
 def is_empty():
-	return File.select().limit(1).count() == 0
+	return Record.select().limit(1).count() == 0
 
 def file_exists(item):
 	dbObj = _db_object_from_file(item)
@@ -164,20 +199,27 @@ def get_file_as_db(item):
 	return _file_object_from_db(results[0]) if results.count() > 0 else None
 
 def get_file_by_id(idn):
-	dbObj = File.select().where(File.id_str == idn)
+	dbObj = Record.select().where(Record.id_str == idn)
 	return _file_object_from_db(dbObj[0]) if dbObj.count() > 0 else None
 
 def get_row_by_id(idn):
-	results = File.select().where(File.id_str == idn)
+	results = Record.select().where(Record.id_str == idn)
 	return results[0] if results.count() > 0 else None
 
 def get_all_items():
-	results = File.select().where(File.deleted == False)
+	results = Record.select().where(Record.deleted == False)
 	return [_file_object_from_db(r) for r in results]
+
+def get_all_local():
+	results = Record.select().where(
+		(Record.deleted == False) &
+		(Record.fstype == FileType.LinuxFS)
+	)
+	return [LinuxFS(r.path, r.is_dir) for r in results]
 
 def _db_mirror_from_file(item):
 	item = _db_object_from_file(item)
-	mirror = File()
+	mirror = Record()
 
 	# fix relative path
 	if item.fstype == FileType.DriveFS:
@@ -196,14 +238,14 @@ def _db_mirror_from_file(item):
 	return mirror
 
 def _find_db_object_parent_as_file(dbObj):
-	if not isinstance(dbObj, File):
+	if not isinstance(dbObj, Record):
 		dbObj = _db_object_from_file(dbObj)
 
-	results = File.select().where(
-		(File.is_dir == True) &
-		(File.fstype == dbObj.fstype) &
-		(File.deleted == False) &
-		(File.path == os.path.dirname(dbObj.path))
+	results = Record.select().where(
+		(Record.is_dir == True) &
+		(Record.fstype == dbObj.fstype) &
+		(Record.deleted == False) &
+		(Record.path == os.path.dirname(dbObj.path))
 	)
 	if results.count() == 0:
 		return None 
@@ -234,14 +276,14 @@ def get_mirror(item):
 
 def update_status(item, status):
 	fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
-	query = File.update(
+	query = Record.update(
 				status=status,
 				time_updated=datetime.utcnow()
 			).where(
-				(File.path == item.path) &
-				(File.is_dir == item.is_dir()) &
-				(File.fstype == fstype) &
-				(File.deleted == False)
+				(Record.path == item.path) &
+				(Record.is_dir == item.is_dir()) &
+				(Record.fstype == fstype) &
+				(Record.deleted == False)
 			)
 	query.execute()
 
