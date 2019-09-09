@@ -51,11 +51,9 @@ class Sync:
 
     def get_Qmirror(self, item):
         """ Return and remove the mirror item from the queue if exists. """
-
-        # calculate mirror path
-        #@todo: raise from calc()
-        mirror = db.calculate_mirror(item)
-        if mirror is None:
+        try:
+            mirror = db.calculate_mirror(item)
+        except ErrorPathResolve:
             return None
         qmirrors = [x for x in self._check_queue if all([x.path == mirror.path, x.__class__ == mirror.__class__])]
         Qmirror = qmirrors[0] if len(qmirrors) else None
@@ -124,9 +122,10 @@ class Sync:
             task, item, Qmirror = self._sync_queue.pop(0)
 
             try:
-                mirror = db.get_mirror(item)
-            except ErrorParentNotFound:
-                log.warn("No mirror parent directory exists in database. Might be an untracked item.", item)
+                mirror = db.calculate_mirror(item)
+            except ErrorPathResolve:
+                log.warn("Failed to find path:", item)
+                # ignore
                 continue
 
             if task == Task.create:
@@ -184,6 +183,11 @@ class Sync:
 
         dbItem = db.get_file_as_db(item)
         dbMirr = db.get_file_as_db(mirror)
+
+        if dbItem is None:
+            raise #@todo
+        if dbMirr is None:
+            raise #@todo
 
         if iModified > dbItem.modifiedTime():
             lmodified = True
