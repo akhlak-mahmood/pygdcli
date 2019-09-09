@@ -395,6 +395,10 @@ class GDriveFS(FileSystem):
         self.download_to_local(mirror)
         return mirror
 
+    def remove(self):
+        log.warn("Removing", self, "NOT IMPLEMENTED")
+
+
 
 class GDChanges:
     def __init__(self, last_poll_token=None):

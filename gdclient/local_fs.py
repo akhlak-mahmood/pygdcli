@@ -217,3 +217,7 @@ class LinuxFS(FileSystem):
         if not isinstance(mirror, remote_fs.GDriveFS):
             raise ErrorNotDriveFSObject(mirror)
         return self.gdrive_update(mirror)
+
+    def remove(self):
+        log.warn("Removing", self, "NOT IMPLEMENTED")
+
