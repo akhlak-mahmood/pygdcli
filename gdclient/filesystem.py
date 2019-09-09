@@ -21,6 +21,7 @@ class FileSystem:
         self.path = None
         self.id = None
         self.children = []
+        self.parentIds = None
         self.exists = None
         self._is_dir = None
         self._size = None
