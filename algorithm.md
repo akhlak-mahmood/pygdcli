@@ -26,9 +26,7 @@ for each item in A not in DB:
 for each item in (A or dA or B or dB):
     if item in DB:
         // change, no change, delete
-        if item.same_signature(dbFile):
-            // no change
-            pass
+
         if not item.same_signature(dbFile):
             // change, delete
             if Qmirror:
@@ -53,6 +51,9 @@ for each item in (A or dA or B or dB):
                     DB.update(item)
                     DB.update(mirror)
                     [S7,S9]
+        else:
+            // no change
+            pass
     else:
         // new file, new setup
         if Qmirror:
