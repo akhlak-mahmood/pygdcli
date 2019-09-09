@@ -221,18 +221,18 @@ class TestDatabase(unittest.TestCase):
         rd = GDriveFS(parent.get('files')[3], rr.path)
         rdf = GDriveFS(subdir.get('files')[1], rd.path)
 
-        mirror = db.calculate_mirror(rr)
+        mirror = db.get_mirror(rr)
         self.assertEqual(mirror.path, local_path)
         self.assertTrue(mirror.is_dir())
         # self.assertTrue(mirror.exists)
         self.assertIsInstance(mirror, LinuxFS)
 
-        mirror = db.calculate_mirror(rd)
+        mirror = db.get_mirror(rd)
         self.assertEqual(mirror.path, local_path+'/Photos')
         self.assertTrue(mirror.is_dir())
         self.assertIsInstance(mirror, LinuxFS)
 
-        mirror = db.calculate_mirror(rdf)
+        mirror = db.get_mirror(rdf)
         self.assertEqual(mirror.path, local_path +
                          '/Photos/Sample Photo (5).JPG')
         self.assertTrue(mirror.is_file())

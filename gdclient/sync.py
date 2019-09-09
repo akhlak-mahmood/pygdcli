@@ -122,7 +122,7 @@ class Sync:
             task, item, Qmirror = self._sync_queue.pop(0)
 
             try:
-                mirror = db.calculate_mirror(item)
+                mirror = db.get_mirror(item)
             except ErrorPathResolve:
                 log.warn("Failed to find path:", item)
                 # ignore
@@ -164,9 +164,11 @@ class Sync:
         while self._check_queue:
             self._check_queue_items(self._check_queue.pop(0))
 
-        # if len(self._sync_queue):
-        #     self.login()
-        #     self._execute()
+        if len(self._sync_queue):
+            print(self)
+            input("Press Enter to execute changes: ")
+            self.login()
+            self._execute()
 
         log.say("Finish SyncQ")
 
