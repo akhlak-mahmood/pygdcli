@@ -152,6 +152,7 @@ class Sync:
                 # db.add(item)
                 # db.add(Qmirror)
             else:
+                # no change
                 db.add(item)
                 db.add(Qmirror)
 
@@ -173,42 +174,35 @@ class Sync:
         """ Sync the item with it's mirror file. 
             Do extensive checking to modified time to determine sync direction.
             If modification detected in both local and remote, abort syncing. """
-        log.trace("Syncing", item, " and ", mirror)
-
-        iModified = item.modifiedTime()
-        mModified = mirror.modifiedTime()
-
-        lmodified = None 
-        rmodified = None
+        log.trace("Syncing:", item, " ==> ", mirror)
 
         dbItem = db.get_file_as_db(item)
-        dbMirr = db.get_file_as_db(mirror)
 
-        if dbItem is None:
-            raise #@todo
-        if dbMirr is None:
-            raise #@todo
-
-        if iModified > dbItem.modifiedTime():
-            lmodified = True
-        
-        if rmodified > dbMirr.modifiedTime():
-            rmodified = True
-
-        if iModified > mModified:
-            log.say("Uploading ", item.name, " ==> ", mirror.name)
-            if lmodified:
-                item.update(mirror)
-            else:
-                log.error("Could not detect previous local modification time. Aborting upload to avoid possible conflicts and data loss.")
-
-        elif iModified < mModified:
-            log.say("Downloading ", item.name, " <== ", mirror.name)
-            if rmodified:
-                mirror.update(item)
-            else:
-                log.error("Could not detect previous remote modification time. Aborting download to avoid possible conflicts and data loss.")
+        # current file modification time is later than
+        # the one saved in database
+        if item.modifiedTime() > dbItem.modifiedTime():
+            mirror = item.update(mirror)
+            db.update(item)
+            db.update(mirror)
 
     def resolve_conflict(self, item, mirror):
-        log.warn("Conflict between", item, "and", mirror, "NOT IMPLEMENTED")
-        return
+        log.warn("Conflict between", item, "and", mirror)
+        print("1. Keep", item)
+        print("2. Keep", mirror)
+        print("Anything else: skip")
+
+        try:
+            i = int(input("Please choose: "))
+        except:
+            i = None
+
+        if i == 1:
+            log.trace("Syncing:", item, " ==> ", mirror)
+            mirror = item.update(mirror)
+            db.update(item)
+            db.update(mirror)
+        elif i == 2:
+            log.trace("Syncing:", mirror, " ==> ", item)
+            item = mirror.update(item)
+            db.update(mirror)
+            db.update(item)
