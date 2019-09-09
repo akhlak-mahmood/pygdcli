@@ -141,6 +141,7 @@ class PyGDClient:
         """ Load all local items from database and add to 
             sync queue if change detected. """
 
+        log.say("Calculating local file changes.")
         count = 0
         for item in db.get_all_local():
             dbFile = db.get_file_as_db(item)
@@ -159,6 +160,7 @@ class PyGDClient:
         """ Fetch the remote changes and add to sync 
             queue for processing. """
 
+        log.say("Querying remote changes.")
         count = 0
         dG = GDChanges(self.settings.get('lastChangeToken'))
         for remote_change in dG.fetch():
