@@ -229,12 +229,24 @@ def get_file_as_db(item):
     fstype = FileType.LinuxFS if isinstance(
         item, LinuxFS) else FileType.DriveFS
     results = Record.select().where(
-        (Record.path == item.path) &
-        (Record.is_dir == item.is_dir()) &
-        (Record.fstype == fstype) &
-        (Record.deleted == False)
-    )
-    return _file_object_from_record(results[0]) if results.count() > 0 else None
+                    (Record.path == item.path) &
+                    (Record.is_dir == item.is_dir()) &
+                    (Record.fstype == fstype) &
+                    (Record.deleted == False)
+            )
+    item = _file_object_from_record(results[0]) if results.count() > 0 else None
+
+    if isinstance(item, GDriveFS) and not item.parentIds:
+        parent_path = os.path.dirname(item.path)
+        results = Record.select().where(
+                    (Record.path == parent_path) &
+                    (Record.is_dir == True) &
+                    (Record.fstype == FileType.DriveFS) &
+                    (Record.deleted == False)
+                )
+        if results.count() > 0:
+            item.parentIds = [p.id_str for p in results]
+    return item
 
 
 def get_file_by_id(idn):
@@ -276,6 +288,22 @@ def calculate_mirror(item):
         path = os.path.normpath(path)
         mirror.set_path_id(path, None, itemRec.is_dir)
 
+    return mirror
+
+
+def get_mirror(item):
+    """ Return the mirror file object with parentIds """
+
+    mirror = calculate_mirror(item)
+    if isinstance(mirror, GDriveFS) and not mirror.parentIds:
+        parent_path = os.path.dirname(mirror.path)
+        results = Record.select().where(
+            (Record.path == parent_path) &
+            (Record.is_dir == True) &
+            (Record.fstype == FileType.DriveFS) &
+            (Record.deleted == False)
+        )
+        mirror.parentIds = [p.id_str for p in results]
     return mirror
 
 
