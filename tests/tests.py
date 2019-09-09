@@ -21,6 +21,7 @@ def load_test_responses():
 
     return a, b
 
+
 class TestRemote(unittest.TestCase):
 
     def test_path_id(self):
@@ -37,7 +38,7 @@ class TestRemote(unittest.TestCase):
 
         # set a google doc response object and parent path
         sd = GDriveFS(parent.get('files')[0], rf.path)
-        
+
         self.assertEqual(sd.path, remote_path+'/Market')
         self.assertFalse(sd.is_dir())
         self.assertIn(rf.id, sd.parentIds)
@@ -47,7 +48,7 @@ class TestRemote(unittest.TestCase):
 
         # set a file response object and parent path
         sd = GDriveFS(parent.get('files')[1], rf.path)
-        
+
         self.assertEqual(sd.path, remote_path+'/Document.pdf')
         self.assertFalse(sd.is_dir())
         self.assertIn(rf.id, sd.parentIds)
@@ -57,13 +58,14 @@ class TestRemote(unittest.TestCase):
 
         # set a directory response object and parent path
         sd = GDriveFS(parent.get('files')[3], rf.path)
-        
+
         self.assertEqual(sd.path, remote_path+'/Photos')
         self.assertTrue(sd.is_dir())
         self.assertIn(rf.id, sd.parentIds)
         self.assertTrue(sd.exists)
         self.assertEqual(sd.id, "12345_photo_folder")
         self.assertIsNotNone(sd.mimeType())
+
 
 class TestLocal(unittest.TestCase):
 
@@ -94,6 +96,7 @@ class TestLocal(unittest.TestCase):
 
         fp = LinuxFS(local_path, True)
         self.assertEqual(fp.path, local_path)
+
 
 class TestDatabase(unittest.TestCase):
     test_database = 'test_database.sqlite'
@@ -137,7 +140,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_local_conversion(self):
         fp = LinuxFS("settings.json")
-        dbObj = db._db_object_from_file(fp)
+        dbObj = db._record_object_from_file(fp)
 
         self.assertIsInstance(dbObj, db.Record)
         self.assertEqual(fp.path, dbObj.path)
@@ -148,8 +151,7 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(dbObj.id_str)
         self.assertEqual(dbObj.md5, fp.md5())
 
-
-        fp2 = db._file_object_from_db(dbObj)
+        fp2 = db._file_object_from_record(dbObj)
 
         self.assertIsInstance(fp2, FileSystem)
         self.assertEqual(fp2.path, fp.path)
@@ -162,7 +164,7 @@ class TestDatabase(unittest.TestCase):
     def test_local_dir_conversion(self):
         fp = LinuxFS("gdclient")
 
-        dbObj = db._db_object_from_file(fp)
+        dbObj = db._record_object_from_file(fp)
 
         self.assertIsInstance(dbObj, db.Record)
         self.assertEqual(fp.path, dbObj.path)
@@ -172,7 +174,7 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(dbObj.name, fp.name)
         self.assertIsNotNone(dbObj.id_str)
 
-        fp2 = db._file_object_from_db(dbObj)
+        fp2 = db._file_object_from_record(dbObj)
 
         self.assertIsInstance(fp2, FileSystem)
         self.assertEqual(fp2.path, fp.path)
@@ -181,8 +183,8 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(fp2.is_dir())
 
     def test_file_exists(self):
-        all_items = db.get_all_items()
-        self.assertEqual(len(all_items), 6)
+        all_items = db.get_all_local()
+        self.assertEqual(len(all_items), 2)
 
         fp = LinuxFS("settings.json")
         dp = LinuxFS("gdclient")
@@ -206,17 +208,8 @@ class TestDatabase(unittest.TestCase):
         ret = db.get_file_by_id('test_12345')
         db.update_status(ret, db.Status.synced)
 
-        row = db.get_row_by_id('test_12345')
+        row = db.get_record_by_id('test_12345')
         self.assertEqual(row.status, db.Status.synced)
-
-
-    def test_find_parent(self):
-        child = db.get_row_by_id('test_id_1234SVdJZmdZLWxMcUk')
-        parent = db._find_db_object_parent_as_file(child)
-        self.assertEqual(parent.path, remote_path+"/Photos")
-        self.assertEqual(parent.id, "12345_photo_folder")
-        grandparent = db._find_db_object_parent_as_file(parent)
-        self.assertEqual(grandparent.id, "test_12345")
 
     def test_get_mirror(self):
         fp = LinuxFS("settings.json")
@@ -228,25 +221,25 @@ class TestDatabase(unittest.TestCase):
         rd = GDriveFS(parent.get('files')[3], rr.path)
         rdf = GDriveFS(subdir.get('files')[1], rd.path)
 
-        mirror = db.get_mirror(rr)
+        mirror = db.calculate_mirror(rr)
         self.assertEqual(mirror.path, local_path)
         self.assertTrue(mirror.is_dir())
         # self.assertTrue(mirror.exists)
         self.assertIsInstance(mirror, LinuxFS)
 
-        mirror = db.get_mirror(rd)
+        mirror = db.calculate_mirror(rd)
         self.assertEqual(mirror.path, local_path+'/Photos')
         self.assertTrue(mirror.is_dir())
         self.assertIsInstance(mirror, LinuxFS)
 
-        mirror = db.get_mirror(rdf)
-        self.assertEqual(mirror.path, local_path+'/Photos/Sample Photo (5).JPG')
+        mirror = db.calculate_mirror(rdf)
+        self.assertEqual(mirror.path, local_path +
+                         '/Photos/Sample Photo (5).JPG')
         self.assertTrue(mirror.is_file())
         self.assertIsInstance(mirror, LinuxFS)
 
         fp = LinuxFS(local_path, True)
         self.assertTrue(db.mirror_exists(fp))
-
 
     def test_resolve_mirror_path(self):
         db.connect(self.test_database, remote_path, local_path)
@@ -259,15 +252,15 @@ class TestDatabase(unittest.TestCase):
         ]
 
         for lpath, rpath, isDir in paths:
-            local   = LinuxFS(lpath, isDir)
-            remote  = GDriveFS()
+            local = LinuxFS(lpath, isDir)
+            remote = GDriveFS()
             remote.set_path_id(rpath, "testid", isDir)
 
             self.assertEqual(local.path, lpath)
             self.assertEqual(remote.path, rpath)
 
-            remote_mirror   = db._db_mirror_from_file(local)
-            local_mirror    = db._db_mirror_from_file(remote)
+            remote_mirror = db.calculate_mirror(local)
+            local_mirror = db.calculate_mirror(remote)
 
             self.assertEqual(local_mirror.path, lpath)
             self.assertEqual(remote_mirror.path, rpath)
