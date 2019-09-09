@@ -109,9 +109,11 @@ class GDriveFS(FileSystem):
         """ If the file/dir was initialized as an empty object,
             set it's path and id number. """
         self.path = path
+
+        # idn can be none when it's a dummy object
         if idn:
             self.id = idn
-            self.exists = True          # exists if id is set
+            self.exists = True          # file exists if it has an ID
         self._is_dir = is_a_directory
         self._mimeType = MimeTypes.gdrive_directory
         self.name = os.path.basename(self.path)
