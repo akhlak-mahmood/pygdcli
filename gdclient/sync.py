@@ -47,8 +47,13 @@ class Sync:
     def add(self, item):
         """ Add an item to sync queue for checking """
 
-        # if type and path not in queue
-        if not any(x for x in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
+        # if type and id not in queue, id is set to path for local files
+        if not any(x for x in self._check_queue if all([x.id == item.id, x.__class__ == item.__class__])):
+            try:
+                item = db.resolve_path(item)
+            except:
+                log.trace("Failed to resolve path from DB: ", item)
+
             self._check_queue.append(item)
         else:
             log.trace("Already in queue:", item)
