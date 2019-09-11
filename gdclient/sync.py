@@ -52,6 +52,7 @@ class Sync:
             try:
                 item = db.resolve_path(item)
             except:
+                # if path not resolved, file not within our directory, ignore
                 log.trace("Failed to resolve path from DB: ", item)
             else:
                 self._check_queue.append(item)
@@ -138,28 +139,27 @@ class Sync:
         while self._sync_queue:
             task, item, Qmirror = self._sync_queue.pop(0)
 
-            try:
-                mirror = db.get_mirror(item)
-            except ErrorPathResolve:
-                log.trace("Failed to resolve mirror path:", item)
-                continue
-            except ErrorNotInDatabase:
-                log.warn("Mirror does not exist in database:", item)
-
             if task == Task.create:
-                mirror.create_dir()
-                db.add(item)
-                db.add(mirror)
+                try:
+                    # mirror must exists in db for updating
+                    mirror = db.get_mirror(item)
+                    mirror.create_dir()
+                    db.add(item)
+                    db.add(mirror)
+                except Exception as ex:
+                    log.warn(ex)
 
             elif task == Task.update:
-                # mirror must exists in db for updating
                 try:
+                    # mirror must exists in db for updating
+                    mirror = db.get_mirror(item)
                     self._sync_files(item, mirror)
-                except ErrorIDNotSet as ex:
+                except Exception as ex:
                     log.warn(ex)
 
             elif task == Task.load:
-                # mirror existence in database in optional
+                # mirror existence in database is optional
+                mirror = db.calculate_mirror(item)
                 db.add(item)
                 mirror = item.upload_or_download(mirror)
                 db.add(mirror)
@@ -167,13 +167,12 @@ class Sync:
             elif task == Task.delete:
                 db.remove(item)
                 if db.mirror_exists(item):
+                    mirror = db.get_mirror(item)
                     mirror.remove()
                     db.remove(mirror)
 
             elif task == Task.conflict:
                 self.resolve_conflict(item, Qmirror)
-                # db.add(item)
-                # db.add(Qmirror)
             else:
                 # no change
                 db.update(item)
