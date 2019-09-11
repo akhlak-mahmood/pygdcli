@@ -113,6 +113,9 @@ class FileSystem:
         if self.md5() != mirror.md5():
             return False
 
+        if self.trashed != mirror.trashed:
+            return False
+
         #@todo: add byte by byte comparison option if md5 not available
 
         return True
