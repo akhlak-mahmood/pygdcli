@@ -14,8 +14,6 @@ from .remote_fs import GDriveFS, GDChanges
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
-log.set_max_level(log.DEBUG)
-
 class PyGDClient:
     def __init__(self, settings_file):
         self.settings_file = settings_file
@@ -174,13 +172,11 @@ class PyGDClient:
         log.say("%d remote file changes found." %count)
         self.settings.lastChangeToken = dG.last_poll_token()
 
-    def run(self):
-
-
-        if db.is_empty():
+    def run(self, full_scan=False):
+        if full_scan or db.is_empty():
             # Assuming nothing exists in the db
             # Populate it with local and remote items
-            log.say("Setting up database tree")
+            log.say("Running full recursive scan, this may take a while.")
 
             # recursively check the local files
             self.build_local_tree()
