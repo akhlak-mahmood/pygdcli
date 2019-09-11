@@ -165,7 +165,7 @@ class LinuxFS(FileSystem):
             raise IsADirectoryError(self)
 
         if not remote_file.id:
-            raise ValueError("Remote file ID invalid")
+            raise ErrorIDNotSet("Remote file ID invalid, can not update")
 
         payload = {
             'title': self.name,
