@@ -122,9 +122,10 @@ class PyGDClient:
         if not directory.is_dir():
             raise NotADirectoryError(directory)
 
-        log.trace("Processing directory ", directory.path)
+        log.trace("Scanning ", directory.path)
 
         if not db.file_exists(directory):
+            log.trace("New directory:", directory)
             self.sync.add(directory)
             db.update_status(directory, db.Status.queued)
 
@@ -134,6 +135,7 @@ class PyGDClient:
                 self._add_sync_recursive(child)
             else:
                 if not db.file_exists(child):
+                    log.trace("New file:", directory)
                     self.sync.add(child)
                     db.update_status(child, db.Status.queued)
 
@@ -141,16 +143,18 @@ class PyGDClient:
         """ Load all local items from database and add to 
             sync queue if change detected. """
 
-        log.say("Calculating local file changes.")
+        log.say("Scanning local files for changes.")
         count = 0
         for item in db.get_all_local():
             dbFile = db.get_file_as_db(item)
             if item.exists:
                 if not item.same_file(dbFile):
+                    log.trace("Change found:", item)
                     self.sync.add(item)
                     count += 1
             else:
                 item.trashed = True
+                log.trace("Change found:", item)
                 self.sync.add(item)
                 count += 1
 
@@ -188,7 +192,7 @@ class PyGDClient:
             self._add_sync_recursive(self.remote_root)
             db.add(self.remote_root)
         else:
-            log.say("Checking for changes.")
+            log.say("Checking for new files.")
             # recursively check the local files
             self.build_local_tree()
             self._add_sync_recursive(self.local_root)
