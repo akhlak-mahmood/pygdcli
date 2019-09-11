@@ -163,7 +163,10 @@ def add(item):
 
 
 def update(item):
-    """ Update a database record with the item's properties. """
+    """ Add or update a database record with the item's properties. """
+
+    if not file_exists(item):
+        add(item)
 
     fstype = FileType.LinuxFS if isinstance(
         item, LinuxFS) else FileType.DriveFS
@@ -272,7 +275,7 @@ def calculate_mirror(item):
             parent id or path.
             Raises ErrorPathResolve on failure. """
 
-    # try to resolve he item's path first
+    # try to resolve the item's path first
     itemRec = _record_object_from_file(item)
     mirror = Record()
     # fix relative path from sync root
