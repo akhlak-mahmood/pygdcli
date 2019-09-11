@@ -136,7 +136,7 @@ def _file_object_from_record(dbObj):
     dbFile._md5 = dbObj.md5
     dbFile._size = dbObj.size
     dbFile._is_dir = dbObj.is_dir
-    dbFile.syncTime = dbObj.time_updated
+    dbFile._syncTime = dbObj.time_updated
     dbFile._mimeType = dbObj.mimeType
     dbFile._modifiedTime = dbObj.time_modified
     return dbFile
@@ -263,7 +263,7 @@ def get_file_as_db(item):
         dbFile._md5 = result.md5
         dbFile._size = result.size
         dbFile._is_dir = result.is_dir
-        dbFile.syncTime = result.time_updated
+        dbFile._syncTime = result.time_updated
         dbFile._mimeType = result.mimeType
         dbFile._modifiedTime = result.time_modified
     else:

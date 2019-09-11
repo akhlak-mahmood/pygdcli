@@ -26,7 +26,7 @@ class FileSystem:
         self.exists = None
         self._is_dir = None
         self._size = None
-        self.syncTime = None
+        self._syncTime = None
         self._md5 = None
         self._mimeType = None
         self._modifiedTime = None
@@ -63,9 +63,14 @@ class FileSystem:
         return self._mimeType
 
     def modifiedTime(self):
-        if self._modifiedTime and type(self._modifiedTime, str):
+        if self._modifiedTime and type(self._modifiedTime) == str:
             return dateutil.parser.parse(self._modifiedTime)
         return self._modifiedTime
+
+    def syncTime(self):
+        if self._syncTime and type(self._syncTime) == str:
+            return dateutil.parser.parse(self._syncTime)
+        return self._syncTime
 
     def md5(self):
         return self._md5

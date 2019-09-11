@@ -269,8 +269,8 @@ class GDriveFS(FileSystem):
             return False
 
         # record sync time
-        self.syncTime = datetime.now()
-        local_file.syncTime = self.syncTime
+        self._syncTime = datetime.utcnow()
+        local_file._syncTime = self._syncTime
 
         try:
             # remove the backup

@@ -143,7 +143,7 @@ class LinuxFS(FileSystem):
 
         if file:
             # record sync time
-            self.syncTime = datetime.now()
+            self._syncTime = datetime.utcnow()
             log.say("Upload successful: ", self.path)
             return response
         else:
@@ -193,8 +193,8 @@ class LinuxFS(FileSystem):
             remote_file.set_object(response, None)
 
             # record sync time
-            self.syncTime = datetime.now()
-            remote_file.syncTime = self.syncTime
+            self._syncTime = datetime.utcnow()
+            remote_file._syncTime = self._syncTime
 
             log.say("Update successful: ", self.path)
         else:
