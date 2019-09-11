@@ -74,9 +74,10 @@ class Sync:
         """ Check an item for update, creation etc and set to
             corresponding task queue. """
         if db.file_exists(item):
-            log.trace("DB record found:", item)
             # change, no change, delete
             dbFile = db.get_file_as_db(item)
+            log.trace("DB record found:", dbFile)
+
             if not item.same_file(dbFile):
                 log.trace("Not same as DB:", item)
                 # change or delete
