@@ -139,8 +139,10 @@ class Sync:
             try:
                 mirror = db.get_mirror(item)
             except ErrorPathResolve:
-                log.trace("Failed to find path:", item)
-                # ignore
+                log.trace("Failed to resolve mirror path:", item)
+                continue
+            except ErrorNotInDatabase:
+                log.error("Mirror does not exist in database:", item)
                 continue
 
             if task == Task.create:

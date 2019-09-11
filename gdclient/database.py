@@ -326,9 +326,25 @@ def calculate_mirror(item):
 
 
 def get_mirror(item):
-    """ Return the mirror file object with parentIds """
+    """ Return the mirror file object from database with parentIds.
+        Raises ErrorPathResolve, ErrorNotInDatabase
+    """
 
     mirror = calculate_mirror(item)
+
+    fstype = FileType.LinuxFS if isinstance(mirror, LinuxFS) else FileType.DriveFS
+    results = Record.select().where(
+        (Record.path == mirror.path) &
+        (Record.is_dir == mirror.is_dir()) &
+        (Record.fstype == fstype) &
+        (Record.deleted == False)
+    )
+
+    if results.count() == 0:
+        raise ErrorNotInDatabase
+
+    mirror = _file_object_from_record(results[0])
+
     if isinstance(mirror, GDriveFS) and not mirror.parentIds:
         parent_path = os.path.dirname(mirror.path)
         results = Record.select().where(
