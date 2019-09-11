@@ -152,7 +152,7 @@ class PyGDClient:
                     count += 1
             else:
                 item.trashed = True
-                log.trace("Change found:", item)
+                log.trace("File deleted:", item)
                 self.sync.add(item)
                 count += 1
 
