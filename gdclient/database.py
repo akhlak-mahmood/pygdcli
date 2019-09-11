@@ -385,4 +385,4 @@ def close():
     global _db
     _db.commit()
     _db.close()
-    log.say("Database close OK")
+    log.trace("Database close OK")

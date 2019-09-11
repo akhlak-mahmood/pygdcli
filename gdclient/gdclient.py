@@ -204,7 +204,5 @@ class PyGDClient:
         # start syncing
         self.sync.run()
 
-        print(self.sync)
-
         db.close()
         self.settings.save(self.settings_file)
