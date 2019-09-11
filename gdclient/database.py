@@ -229,18 +229,33 @@ def get_file_as_db(item):
     """ Return a file object with all the info as saved in database
             None if not found. """
 
-    fstype = FileType.LinuxFS if isinstance(
-        item, LinuxFS) else FileType.DriveFS
+    fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
     results = Record.select().where(
                     (Record.path == item.path) &
                     (Record.is_dir == item.is_dir()) &
                     (Record.fstype == fstype) &
                     (Record.deleted == False)
             )
-    item = _file_object_from_record(results[0]) if results.count() > 0 else None
 
-    if isinstance(item, GDriveFS) and not item.parentIds:
-        parent_path = os.path.dirname(item.path)
+    if results.count() > 0:
+        result = results[0]
+        dbFile = filesystem.FileSystem()
+
+        dbFile.id = result.id_str
+        dbFile.path = result.path
+        dbFile.name = result.name
+        dbFile._md5 = result.md5
+        dbFile._size = result.size
+        dbFile._is_dir = result.is_dir
+        dbFile.syncTime = result.time_updated
+        dbFile._mimeType = result.mimeType
+        dbFile._modifiedTime = result.time_modified
+    else:
+        return None
+
+    # set GDrive type object's parent IDs
+    if result.fstype == FileType.DriveFS and not dbFile.parentIds:
+        parent_path = os.path.dirname(dbFile.path)
         results = Record.select().where(
                     (Record.path == parent_path) &
                     (Record.is_dir == True) &
@@ -248,8 +263,8 @@ def get_file_as_db(item):
                     (Record.deleted == False)
                 )
         if results.count() > 0:
-            item.parentIds = [p.id_str for p in results]
-    return item
+            dbFile.parentIds = [p.id_str for p in results]
+    return dbFile
 
 
 def get_file_by_id(idn):
