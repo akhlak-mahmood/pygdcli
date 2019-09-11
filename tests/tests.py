@@ -107,6 +107,8 @@ class TestDatabase(unittest.TestCase):
         db.add(fp)
         dp = LinuxFS("gdclient")
         db.add(dp)
+        lp = LinuxFS(local_path, True)
+        db.add(lp)
 
         parent, subdir = load_test_responses()
         rr = GDriveFS()
@@ -184,7 +186,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_file_exists(self):
         all_items = db.get_all_local()
-        self.assertEqual(len(all_items), 2)
+        self.assertEqual(len(all_items), 3)
 
         fp = LinuxFS("settings.json")
         dp = LinuxFS("gdclient")
@@ -227,12 +229,12 @@ class TestDatabase(unittest.TestCase):
         # self.assertTrue(mirror.exists)
         self.assertIsInstance(mirror, LinuxFS)
 
-        mirror = db.get_mirror(rd)
+        mirror = db.calculate_mirror(rd)
         self.assertEqual(mirror.path, local_path+'/Photos')
         self.assertTrue(mirror.is_dir())
         self.assertIsInstance(mirror, LinuxFS)
 
-        mirror = db.get_mirror(rdf)
+        mirror = db.calculate_mirror(rdf)
         self.assertEqual(mirror.path, local_path +
                          '/Photos/Sample Photo (5).JPG')
         self.assertTrue(mirror.is_file())
