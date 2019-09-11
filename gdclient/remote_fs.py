@@ -74,24 +74,6 @@ class GDriveFS(FileSystem):
         else:
             raise RuntimeError("Failed to create remote directory.", response)
 
-    def modifiedTime(self):
-        if not self.exists or self._modifiedTime is None:
-            return None
-
-        # parse the RFC 3339 time as python datetime with utc timezone
-        return dateutil.parser.parse(self._modifiedTime)
-
-    def md5(self):
-        if self.is_dir():
-            return None
-        return self._md5
-
-    def mimeType(self):
-        if self.is_dir():
-            return MimeTypes.gdrive_directory
-        else:
-            return self._mimeType
-
     def set_object(self, gdFileObject, parent_path):
         """ If the file/dir was initialized as an empty object,
             set it's properties using a GDrive api response. """
