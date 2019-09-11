@@ -1,14 +1,18 @@
-Algorithm:
+Algorithm to sync Google Drive:
 =====================================================================
+References:
+    http://blog.ezyang.com/2012/08/how-offlineimap-works/
+    https://unterwaditzer.net/2016/sync-algorithm.html
+
 A       = Local files
 B       = Remote files
 D/DB    = Database records
-dB      = Remote changes
+dB      = Remote changes reported by Drive API V3
 dA      = Local changes
 
 Qmirror = file(item.path, type (B if item A else A)) or None
 mirror  = db.calculate_mirror_from_path(item)
-dbFile  = db.get_file(item.path, type of item)
+dbFile  = db.get_info_as_saved_in_db(item.path, type of item)
 
 proc item.same_signature(other):
     item.size       ==  other.size
