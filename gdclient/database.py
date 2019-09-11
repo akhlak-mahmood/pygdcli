@@ -112,6 +112,7 @@ def _record_object_from_file(fileObj):
     dbRec.mimeType = fileObj.mimeType()
     dbRec.time_modified = fileObj.modifiedTime()
     dbRec.time_updated = None
+    dbRec.deleted = fileObj.trashed
 
     if fileObj.is_file():
         dbRec.md5 = fileObj.md5()
@@ -139,6 +140,7 @@ def _file_object_from_record(dbObj):
     dbFile._syncTime = dbObj.time_updated
     dbFile._mimeType = dbObj.mimeType
     dbFile._modifiedTime = dbObj.time_modified
+    dbFile.trashed = dbObj.deleted
     return dbFile
 
 
