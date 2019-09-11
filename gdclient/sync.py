@@ -53,8 +53,8 @@ class Sync:
                 item = db.resolve_path(item)
             except:
                 log.trace("Failed to resolve path from DB: ", item)
-
-            self._check_queue.append(item)
+            else:
+                self._check_queue.append(item)
         else:
             log.trace("Already in queue:", item)
 
