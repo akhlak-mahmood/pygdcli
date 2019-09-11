@@ -1,7 +1,7 @@
 import sys
 import os
 
-from datetime import datetime, date, time
+from datetime import datetime, date
 
 DEBUG = 'Trace'
 INFO = 'Info'
