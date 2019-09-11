@@ -135,7 +135,7 @@ class GDriveFS(FileSystem):
         else:
             self._is_dir = False
 
-        self.trashed = self.gdFileObject.get('trashed')
+        self.trashed = self.gdFileObject.get('trashed', False)
 
         if self.is_file():
             try:
@@ -246,8 +246,9 @@ class GDriveFS(FileSystem):
 
             local_file.exists = True
             log.say("Save OK ", local_file.path)
-        except:
+        except Exception as ex:
             log.error("Failed to download:", self.path)
+            print(ex)
             return False
 
         # record sync time
@@ -385,7 +386,7 @@ class GDriveFS(FileSystem):
         try:
             # trash/delete is recursive
             #@todo: if directory, recursively remove children from DB as well
-            auth.service.files().trash(fileId=self.id).execute()
+            auth.service.files().delete(fileId=self.id).execute()
         except Exception as ex:
             log.error(ex)
         else:
