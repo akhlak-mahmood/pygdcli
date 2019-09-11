@@ -136,9 +136,7 @@ class GDriveFS(FileSystem):
         # resolve remote path
         # if path is already set, ignore
         if self.path is None:
-            if parent_path is None:
-                log.warn("Undefined parent path, path needs to be resolved.")
-            else:
+            if parent_path:
                 self.path = os.path.join(parent_path, self.name)
 
         self._mimeType = self.gdFileObject.get('mimeType')
