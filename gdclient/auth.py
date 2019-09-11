@@ -6,8 +6,9 @@ from google.auth.transport.requests import Request
 
 from . import log
 
-_scopes = ['https://www.googleapis.com/auth/drive.metadata.readonly']
 service = None 
+_token_pickle = None
+_scopes = ['https://www.googleapis.com/auth/drive.metadata.readonly']
 
 def set_scopes(scope_items):
     global _scopes, _token_pickle
@@ -16,7 +17,7 @@ def set_scopes(scope_items):
         _scopes = [scope_items]
     else:
         _scopes = scope_items
-    log.trace("Set new scopes ", _scopes)
+    log.trace("Set scopes ", _scopes)
 
 def update_scopes(scope_items, _token_pickle):
     set_scopes(scope_items)
