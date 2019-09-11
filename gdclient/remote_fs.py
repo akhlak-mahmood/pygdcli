@@ -386,11 +386,15 @@ class GDriveFS(FileSystem):
         try:
             # trash/delete is recursive
             #@todo: if directory, recursively remove children from DB as well
-            auth.service.files().delete(fileId=self.id).execute()
+            updated_file = auth.service.files().update(fileId=self.id,
+                                    body={'trashed': True},
+                                    fields=FIELDS
+                                ).execute()
         except Exception as ex:
             log.error(ex)
         else:
-            log.say("Delete OK:", self)
+            self.set_object(updated_file, None)
+            log.say("Trash OK:", self)
 
 
 
