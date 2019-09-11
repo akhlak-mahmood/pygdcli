@@ -216,9 +216,16 @@ def is_empty():
 def file_exists(item):
     fstype = FileType.LinuxFS if isinstance(
         item, LinuxFS) else FileType.DriveFS
+
+    # convert to record object to resolve remote paths
+    try:
+        recItem = _record_object_from_file(item)
+    except:
+        return False
+
     results = Record.select().where(
-        (Record.path == item.path) &
-        (Record.is_dir == item.is_dir()) &
+        (Record.path == recItem.path) &
+        (Record.is_dir == recItem.is_dir) &
         (Record.fstype == fstype) &
         (Record.deleted == False)
     )
