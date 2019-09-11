@@ -144,8 +144,7 @@ class Sync:
                 log.trace("Failed to resolve mirror path:", item)
                 continue
             except ErrorNotInDatabase:
-                log.error("Mirror does not exist in database:", item)
-                continue
+                log.warn("Mirror does not exist in database:", item)
 
             if task == Task.create:
                 mirror.create_dir()
@@ -153,9 +152,14 @@ class Sync:
                 db.add(mirror)
 
             elif task == Task.update:
-                self._sync_files(item, mirror)
+                # mirror must exists in db for updating
+                try:
+                    self._sync_files(item, mirror)
+                except ErrorIDNotSet as ex:
+                    log.warn(ex)
 
             elif task == Task.load:
+                # mirror existence in database in optional
                 db.add(item)
                 mirror = item.upload_or_download(mirror)
                 db.add(mirror)
