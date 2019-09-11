@@ -1,4 +1,5 @@
 import json
+import dateutil
 
 UPLOAD_CHUNK_SIZE = 1024*1024
 WRITE_CHUNK_SIZE = 131072
@@ -62,6 +63,8 @@ class FileSystem:
         return self._mimeType
 
     def modifiedTime(self):
+        if self._modifiedTime and type(self._modifiedTime, str):
+            return dateutil.parser.parse(self._modifiedTime)
         return self._modifiedTime
 
     def md5(self):
