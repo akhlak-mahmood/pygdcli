@@ -232,6 +232,15 @@ def file_exists(item):
     return results.count() > 0
 
 
+def resolve_path(item):
+    """ Resolves the path of the file object from database.
+        Raises ErrorPathResolve. """
+    
+    # convert to record object to resolve remote path
+    recObj = _record_object_from_file(item)
+    return _file_object_from_record(recObj)
+
+
 def get_file_as_db(item):
     """ Return a file object with all the info as saved in database
             None if not found. """
