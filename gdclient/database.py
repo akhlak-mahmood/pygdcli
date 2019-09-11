@@ -220,7 +220,7 @@ def file_exists(item):
     # convert to record object to resolve remote paths
     try:
         recItem = _record_object_from_file(item)
-    except:
+    except ErrorPathResolve:
         return False
 
     results = Record.select().where(
