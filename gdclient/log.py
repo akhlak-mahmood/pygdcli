@@ -22,11 +22,13 @@ def _write(text):
     _output.write(text+'\n')
     _output.flush()
 
+
 def _above_max_level(level):
     if level in _loggable_levels or level not in _levels:
         return True
     else:
         return False
+
 
 def set_max_level(threshold):
     global _max_level, _levels, _loggable_levels
@@ -63,7 +65,8 @@ def set_output(stream):
             stream.write('')
             stream.flush()
         except AttributeError:
-            raise AttributeError("Provided stream object is invalid, must implement write and flush methods")
+            raise AttributeError(
+                "Provided stream object is invalid, must implement write and flush methods")
         except IOError:
             raise IOError("Cannot write to provided stream object")
 
@@ -72,29 +75,33 @@ def set_output(stream):
     if _log_errors:
         sys.stderr = _output
 
+
 def set_format(format):
     global _format
     _format = format
+
 
 def _log(log_level, text):
     global _format
     if _above_max_level(log_level):
         now = datetime.now()
         _write(_format.format(time=now.time(),
-                    datetime=now,
-                    date=date.today(),
-                    level=log_level,
-                    text=text
-            ))
+                              datetime=now,
+                              date=date.today(),
+                              level=log_level,
+                              text=text
+                              ))
+
 
 def _new(text):
     global _format, _max_level
     now = datetime.now()
     _write("\n"+_format.format(time=now.time(), datetime=now,
-                    date=date.today(),
-                    level=_max_level,
-                    text=text
-            ))
+                               date=date.today(),
+                               level=_max_level,
+                               text=text
+                               ))
+
 
 def _formatted(*text):
     if len(text) == 1:
@@ -111,17 +118,22 @@ def _formatted(*text):
             args.insert(0, fmt.strip())
             return " ".join(args)
 
+
 def trace(*text):
     _log(DEBUG, _formatted(*text))
+
 
 def say(*text):
     _log(INFO, _formatted(*text))
 
+
 def warn(*text):
     _log(WARNING, _formatted(*text))
 
+
 def error(*text):
     _log(ERROR, _formatted(*text))
+
 
 def critical(*text):
     _log(CRITICAL, _formatted(*text))
