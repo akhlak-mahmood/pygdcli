@@ -34,20 +34,24 @@ class Sync:
 
     def login(self):
         if not self._login:
+            log.trace("Logging in to remote server.")
             auth.authenticate(self.credentials_file, self.token_file)
             self._login = True
+            log.say("Authetication OK")
+        else:
+            log.trace("Already logged in to remote.")
 
     def __repr__(self):
         return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
         
     def add(self, item):
         """ Add an item to sync queue for checking """
-        if not isinstance(item, FileSystem):
-            raise ErrorNotFileSystemObject(item)
 
         # if type and path not in queue
         if not any(x for x in self._check_queue if all([x.path == item.path, x.__class__ == item.__class__])):
             self._check_queue.append(item)
+        else:
+            log.trace("Already in queue:", item)
 
     def get_Qmirror(self, item):
         """ Return and remove the mirror item from the queue if exists. """
@@ -70,14 +74,17 @@ class Sync:
         """ Check an item for update, creation etc and set to
             corresponding task queue. """
         if db.file_exists(item):
+            log.trace("DB record found:", item)
             # change, no change, delete
             dbFile = db.get_file_as_db(item)
             if not item.same_file(dbFile):
+                log.trace("Not same as DB:", item)
                 # change or delete
                 Qmirror = self.get_Qmirror(item)
                 if Qmirror:
                     # change in both local and remote
                     if item.same_file(Qmirror):
+                        log.trace("Local and remote changes same:", item)
                         # same in both local and remote
                         # no further processing needed
                         self._sync_queue.append((Task.nochange, item, Qmirror))
@@ -95,6 +102,7 @@ class Sync:
                         # change
                         self._sync_queue.append((Task.update, item, None))
         else:
+            log.trace("Not in DB:", item)
             # new file, new setup
             Qmirror = self.get_Qmirror(item)
             if Qmirror:
@@ -102,6 +110,7 @@ class Sync:
                 if item.same_file(Qmirror):
                     # same in both local and remote
                     # no further processing needed
+                    log.trace("Local and remote changes same:", item)
                     self._sync_queue.append((Task.nochange, item, Qmirror))
                 else:
                     # different version
@@ -124,7 +133,7 @@ class Sync:
             try:
                 mirror = db.get_mirror(item)
             except ErrorPathResolve:
-                log.warn("Failed to find path:", item)
+                log.trace("Failed to find path:", item)
                 # ignore
                 continue
 
@@ -153,16 +162,18 @@ class Sync:
                 # db.add(Qmirror)
             else:
                 # no change
-                db.add(item)
-                db.add(Qmirror)
+                db.update(item)
+                db.update(Qmirror)
 
 
     def run(self):
         """ Process sync queue """
-        log.say("Running SyncQ: ", len(self._check_queue), "items")
+        log.say("Checking SyncQ: ", len(self._check_queue), "items")
 
         while self._check_queue:
             self._check_queue_items(self._check_queue.pop(0))
+
+        log.say("SyncQ check complete.")
 
         if len(self._sync_queue):
             print(self)
@@ -170,7 +181,7 @@ class Sync:
             self.login()
             self._execute()
 
-        log.say("Finish SyncQ")
+        log.say("Finish Sync.")
 
     def _sync_files(self, item, mirror):
         """ Sync the item with it's mirror file. 
@@ -194,7 +205,7 @@ class Sync:
         print("Anything else: skip")
 
         try:
-            i = int(input("Please choose: "))
+            i = int(input("Please enter your choice: "))
         except:
             i = None
 
