@@ -378,7 +378,19 @@ class GDriveFS(FileSystem):
         return mirror
 
     def remove(self):
-        log.warn("Removing", self, "NOT IMPLEMENTED")
+        if not self.id:
+            raise ErrorIDNotSet("Can not remove.")
+
+        log.trace("Removing", self)
+        try:
+            # trash/delete is recursive
+            #@todo: if directory, recursively remove children from DB as well
+            auth.service.files().trash(fileId=self.id).execute()
+        except Exception as ex:
+            log.error(ex)
+        else:
+            log.say("Delete OK:", self)
+
 
 
 

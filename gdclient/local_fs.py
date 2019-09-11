@@ -1,5 +1,6 @@
 import os
 import io
+import shutil
 import hashlib
 import mimetypes
 from datetime import datetime
@@ -222,5 +223,15 @@ class LinuxFS(FileSystem):
         return self.gdrive_update(mirror)
 
     def remove(self):
-        log.warn("Removing", self, "NOT IMPLEMENTED")
+        log.trace("Removing", self)
 
+        if os.path.exists(self.path):
+            try:
+                if self.is_dir():
+                    shutil.rmtree(self.path)
+                else:
+                    os.remove(self.path)
+            except Exception as ex:
+                log.error(ex)
+            else:
+                log.say("Delete OK:", self.path)
