@@ -107,6 +107,8 @@ class Sync:
                     else:
                         # change
                         self._sync_queue.append((Task.update, item, None))
+            else:
+                log.trace("File signature same as database:", item)
         else:
             log.trace("Not in DB:", item)
             # new file, new setup
