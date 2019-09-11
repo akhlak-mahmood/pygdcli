@@ -258,8 +258,8 @@ class GDriveFS(FileSystem):
             # remove the backup
             os.remove(backup_path)
             log.say("Removed backup: ", backup_path)
-        except:
-            log.warn("Failed to remove local backup: ", backup_path)
+        except Exception as ex:
+            log.trace(ex)
 
         return True
 
