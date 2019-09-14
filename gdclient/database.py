@@ -324,6 +324,16 @@ def calculate_mirror(item):
         path = os.path.normpath(path)
         mirror.set_path_id(path, None, itemRec.is_dir)
 
+    if isinstance(mirror, GDriveFS) and not mirror.parentIds:
+        parent_path = os.path.dirname(mirror.path)
+        results = Record.select().where(
+            (Record.path == parent_path) &
+            (Record.is_dir == True) &
+            (Record.fstype == FileType.DriveFS) &
+            (Record.deleted == False)
+        )
+        mirror.parentIds = [p.id_str for p in results]
+
     return mirror
 
 
