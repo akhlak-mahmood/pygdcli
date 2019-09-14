@@ -405,8 +405,6 @@ class GDChanges:
                 fields=CHFIELDS
             ).execute()
             for change in response.get('changes'):
-                log.say('Change found for file: %s' %
-                        change.get('file').get('name'))
                 item = GDriveFS()
 
                 # setting parent as None, which needs to be resolved
