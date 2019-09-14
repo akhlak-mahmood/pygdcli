@@ -81,9 +81,9 @@ class FileSystem:
         text = [
             self.__class__.__name__,
             "D" if self.is_dir() else "F",
-            str(self.path),
-            str(self.name),
-            str(self.md5())
+            # str(self.name),
+            # str(self.md5()),
+            str(self.path)
         ]
         return "::".join(text)
 
