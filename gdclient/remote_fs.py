@@ -270,10 +270,11 @@ class GDriveFS(FileSystem):
             fh = io.BytesIO()
             downloader = MediaIoBaseDownload(fh, request)
 
+            log.say("Downloading file:", self.name, "please wait ...")
             done = False
             while done is False:
                 status, done = downloader.next_chunk()
-                log.say("Downloaded %d%%." % int(status.progress() * 100))
+                log.trace("Downloaded %d%%." % int(status.progress() * 100))
 
             return fh
 
