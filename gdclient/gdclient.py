@@ -82,7 +82,11 @@ class PyGDClient:
             self.settings.ignore_paths = [".gdcli*"]
 
         # save the default settings
-        self.settings.save(self.settings_file)
+        if not os.path.isfile(self.settings_file):
+            self.settings.save(self.settings_file)
+            log.say("Settings file created: ", self.settings_file)
+            log.say("Please update the defaults and rerun.")
+            sys.exit(0)
 
     def build_local_tree(self):
         """ Recursively build tree of local sync directory. """
