@@ -209,9 +209,9 @@ class Sync:
             self.login()
             self._execute()
         else:
-            log.say("All files in sync.")
+            log.say("All files in sync, no action needed.")
 
-        log.say("Finish Sync.")
+        log.say("Finished Sync.")
 
     def _sync_files(self, item, mirror):
         """ Sync the item with it's mirror file. 
