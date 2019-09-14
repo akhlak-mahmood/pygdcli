@@ -118,6 +118,9 @@ class LinuxFS(FileSystem):
         if not self.is_file():
             raise IsADirectoryError(self)
 
+        if not parentIds:
+            raise ErrorParentNotFound("Must specify parentIDs to upload file.", self)
+
         payload = {
             'name': self.name,
             'parents': parentIds
