@@ -113,9 +113,11 @@ class Sync:
                     # delete in either local or remote
                     if item.trashed:
                         self._sync_queue.append((Task.delete, item, None))
+                        log.trace("Queued for deletion", item)
                     else:
                         # change
                         self._sync_queue.append((Task.update, item, None))
+                        log.trace("Queued for sync", item)
             else:
                 log.trace("File signature same as database:", item)
         else:
@@ -140,8 +142,10 @@ class Sync:
                     # new file or directory
                     if item.is_file():
                         self._sync_queue.append((Task.load, item, None))
+                        log.trace("Queued for download/upload", item)
                     else:
                         self._sync_queue.append((Task.create, item, None))
+                        log.trace("Queued for creation", item)
 
     def _execute(self):
         """ Run the set task for the queue items. """
