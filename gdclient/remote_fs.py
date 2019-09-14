@@ -221,17 +221,6 @@ class GDriveFS(FileSystem):
         if local_file.is_dir() or self.is_dir():
             raise IsADirectoryError("Can not download directory")
 
-        backup_path = local_file.path + ".bak"
-        if local_file.exists:
-            # if the target local file already exist, make a backup of it
-            # incase the download fails
-            try:
-                os.rename(local_file.path, backup_path)
-                log.say("Existing local file backed up: ", backup_path)
-            except:
-                log.error("Failed to backup as: ", backup_path)
-                log.warn("Continuing anyway ...")
-
         try:
             # download bytes to memory, may fail in case of huge files
             fh = self.download_to_memory()
@@ -255,12 +244,6 @@ class GDriveFS(FileSystem):
         self._syncTime = datetime.utcnow()
         local_file._syncTime = self._syncTime
 
-        try:
-            # remove the backup
-            os.remove(backup_path)
-            log.say("Removed backup: ", backup_path)
-        except Exception as ex:
-            log.trace(ex)
 
         return True
 
