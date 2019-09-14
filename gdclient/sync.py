@@ -139,15 +139,17 @@ class Sync:
         while self._sync_queue:
             task, item, Qmirror = self._sync_queue.pop(0)
 
+            log.trace("Processing", task, item)
+
             if task == Task.create:
                 try:
-                    # mirror must exists in db for updating
-                    mirror = db.get_mirror(item)
+                    mirror = db.calculate_mirror(item)
                     mirror.create_dir()
                     db.add(item)
                     db.add(mirror)
                 except Exception as ex:
-                    log.warn(ex)
+                    log.warn(type(ex).__name__)
+                    log.warn("Task.create failed:", ex)
 
             elif task == Task.update:
                 try:
@@ -155,24 +157,37 @@ class Sync:
                     mirror = db.get_mirror(item)
                     self._sync_files(item, mirror)
                 except Exception as ex:
-                    log.warn(ex)
+                    log.warn(type(ex).__name__)
+                    log.warn("Task.update failed:", ex)
 
             elif task == Task.load:
                 # mirror existence in database is optional
-                mirror = db.calculate_mirror(item)
-                db.add(item)
-                mirror = item.upload_or_download(mirror)
-                db.add(mirror)
+                try:
+                    mirror = db.calculate_mirror(item)
+                    db.add(item)
+                    mirror = item.upload_or_download(mirror)
+                    db.add(mirror)
+                except Exception as ex:
+                    log.warn(type(ex).__name__)
+                    log.warn("Task.load failed:", ex)
 
             elif task == Task.delete:
-                db.remove(item)
-                if db.mirror_exists(item):
-                    mirror = db.get_mirror(item)
-                    mirror.remove()
-                    db.remove(mirror)
+                try:
+                    db.remove(item)
+                    if db.mirror_exists(item):
+                        mirror = db.get_mirror(item)
+                        mirror.remove()
+                        db.remove(mirror)
+                except Exception as ex:
+                    log.warn(type(ex).__name__)
+                    log.warn("Task.delete failed:", ex)
 
             elif task == Task.conflict:
-                self.resolve_conflict(item, Qmirror)
+                try:
+                    self.resolve_conflict(item, Qmirror)
+                except Exception as ex:
+                    log.warn(type(ex).__name__)
+                    log.warn("Task.conflict failed:", ex)
             else:
                 # no change
                 db.update(item)
