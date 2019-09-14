@@ -208,6 +208,8 @@ class Sync:
             input("Press Enter to execute changes: ")
             self.login()
             self._execute()
+        else:
+            log.say("All files in sync.")
 
         log.say("Finish Sync.")
 
