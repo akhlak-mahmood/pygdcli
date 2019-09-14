@@ -98,21 +98,20 @@ class PyGDClient:
     def build_remote_tree(self):
         """ Recursively build tree of remote sync directory. """
 
-        if not 'remote_root_id' in self.settings:
+        if not db.getRootId():
             log.say("Resolving remote root path ",
                     self.settings.remote_root_path)
             self.remote_root = GDriveFS.remote_path_object(
                 self.settings.remote_root_path)
             if self.remote_root:
-                self.settings.remote_root_id = self.remote_root.id
-                self.settings.save(self.settings_file)
+                db.setRootId(self.remote_root.id)
             else:
                 log.critical("Can not determine remote path.")
                 exit(1)
         else:
             self.remote_root = GDriveFS()
             self.remote_root.set_path_id(
-                self.settings.remote_root_path, self.settings.remote_root_id, True)
+                self.settings.remote_root_path, db.getRootId(), True)
 
         # recursively query remote directory file list
         self.remote_root.list_dir(recursive=True)
@@ -181,12 +180,12 @@ class PyGDClient:
         log.say("Querying remote changes with last change token: ",
                 self.settings.get('lastChangeToken'))
         count = 0
-        dG = GDChanges(self.settings.get('lastChangeToken'))
+        dG = GDChanges(db.getChangeToken())
         for remote_change in dG.fetch():
             self.sync.add(remote_change)
             count += 1
         log.say("%d remote file changes reported." % count)
-        self.settings.lastChangeToken = dG.last_poll_token()
+        db.setChangeToken(dG.last_poll_token())
 
     def run(self, full_scan=False):
         if full_scan or db.is_empty():

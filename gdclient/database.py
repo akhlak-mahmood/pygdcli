@@ -30,6 +30,11 @@ class BaseModel(Model):
         database = _db
 
 
+class Configs(BaseModel):
+    changeToken = CharField(max_length=10, null=True)
+    remote_root_id = CharField(max_length=512, null=True)
+
+
 class Record(BaseModel):
     # Basename of the file
     name = CharField(max_length=256)
@@ -75,7 +80,7 @@ def connect(database_file, remote_root_path, local_root_path):
         try:
             _db.init(database_file)
             _db.connect()
-            _db.create_tables([Record])
+            _db.create_tables([Record, Configs])
             log.trace("Database connect OK:", database_file)
         except Exception as ex:
             log.critical("Failed to load database file", database_file)
@@ -397,6 +402,46 @@ def update_status(item, status):
         (Record.deleted == False)
     )
     query.execute()
+
+
+def setRootId(id_str):
+    results = Configs.select().limit(1)
+    if results.count() > 0:
+        query = Configs.update(remote_root_id=id_str).where(Configs.id == 1)
+        query.execute()
+    else:
+        cfg = Configs()
+        cfg.remote_root_id = id_str
+        cfg.save()
+    log.trace("Root ID saved in database.")
+
+
+def getRootId():
+    results = Configs.select().limit(1)
+    if results.count() > 0:
+        return results[0].remote_root_id
+    else:
+        return None
+
+
+def setChangeToken(token_str):
+    results = Configs.select().limit(1)
+    if results.count() > 0:
+        query = Configs.update(changeToken=token_str).where(Configs.id == 1)
+        query.execute()
+    else:
+        cfg = Configs()
+        cfg.changeToken = token_str
+        cfg.save()
+    log.trace("ChangeToken saved in database.")
+
+
+def getChangeToken():
+    results = Configs.select().limit(1)
+    if results.count() > 0:
+        return results[0].changeToken
+    else:
+        return None
 
 
 def close():
