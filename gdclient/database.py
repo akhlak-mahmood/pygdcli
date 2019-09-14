@@ -72,10 +72,14 @@ def connect(database_file, remote_root_path, local_root_path):
     _local_root = local_root_path
 
     if _db.is_closed():
-        _db.init(database_file)
-        _db.connect()
-        _db.create_tables([Record])
-        log.say("Database connect OK:", database_file)
+        try:
+            _db.init(database_file)
+            _db.connect()
+            _db.create_tables([Record])
+            log.trace("Database connect OK:", database_file)
+        except Exception as ex:
+            log.critical("Failed to load database file", database_file)
+            raise
 
     return _db
 
