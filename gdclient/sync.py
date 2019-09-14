@@ -1,4 +1,5 @@
 import os
+import fnmatch
 
 from . import log
 from . import auth
@@ -20,16 +21,14 @@ class Task:
 
 
 class Sync:
-    def __init__(self, scopes, credentials_file, token_file):
+    def __init__(self, scopes, settings):
         self.scopes = scopes
-        self.credentials_file = credentials_file
-        self.token_file = token_file
+        self.settings = settings
         self._login = False
-
-        self.setup_auth()
-
         self._check_queue = []
         self._sync_queue = []
+
+        self.setup_auth()
 
     def setup_auth(self):
         auth.set_scopes(self.scopes)
@@ -37,7 +36,7 @@ class Sync:
     def login(self):
         if not self._login:
             log.trace("Logging in to remote server.")
-            auth.authenticate(self.credentials_file, self.token_file)
+            auth.authenticate(self.settings.credentials_file, self.settings.token_pickle)
             self._login = True
             log.say("Authetication OK")
         else:
@@ -57,7 +56,11 @@ class Sync:
                 # if path not resolved, file not within our directory, ignore
                 log.trace("Failed to resolve path from DB: ", item)
             else:
-                self._check_queue.append(item)
+                for ignore in self.settings.ignore_paths:
+                    if fnmatch.fnmatch(item.name, ignore) or fnmatch.fnmatch(item.path, ignore):
+                        log.say("Ignore: ", item)
+                    else:
+                        self._check_queue.append(item)
         else:
             log.trace("Already in queue:", item)
 

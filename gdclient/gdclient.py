@@ -35,9 +35,7 @@ class PyGDClient:
                    self.settings.local_root_path)
 
         # connect remote server, login
-        self.sync = sync.Sync(SCOPES,
-                              self.settings.credentials_file,
-                              self.settings.token_pickle)
+        self.sync = sync.Sync(SCOPES, self.settings)
 
     def read_settings(self):
         self.settings = utils.AttrDict()
@@ -48,10 +46,10 @@ class PyGDClient:
             try:
                 self.settings.load_json(self.settings_file)
             except:
-                log.critical("Failed to load settings file.")
+                log.critical("Failed to read settings file. Please make sure the json format is valid.")
                 raise
         else:
-            log.info("Not found ", self.settings_file)
+            log.say("Not found ", self.settings_file)
 
         os_home = str(Path.home())
 
@@ -72,12 +70,15 @@ class PyGDClient:
             log.trace("Set local root: ", self.settings.local_root_path)
 
         if not 'remote_root_path' in self.settings:
-            self.settings.remote_root_path = '/Photos'
+            self.settings.remote_root_path = '/'
             log.trace("Set remote root: ", self.settings.remote_root_path)
 
         if not 'db_file' in self.settings:
             self.settings.db_file = 'db.sqlite'
             log.trace("Set database file: ", self.settings.db_file)
+
+        if not 'ignore_paths' in self.settings:
+            self.settings.ignore_paths = []
 
         # save the default settings
         self.settings.save(self.settings_file)
@@ -216,3 +217,4 @@ class PyGDClient:
 
         db.close()
         self.settings.save(self.settings_file)
+        print()
