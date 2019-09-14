@@ -114,6 +114,7 @@ class PyGDClient:
         """ Recursively go over directory contents and add
             to sync queue for processing. """
 
+        count = 0
         if not isinstance(directory, filesystem.FileSystem):
             raise ErrorNotFileSystemObject(directory)
 
@@ -126,16 +127,20 @@ class PyGDClient:
             log.trace("New directory:", directory)
             self.sync.add(directory)
             db.update_status(directory, db.Status.queued)
+            count += 1
 
         # add children, recursively
         for child in directory.children:
             if child.is_dir():
-                self._add_sync_recursive(child)
+                count += self._add_sync_recursive(child)
             else:
                 if not db.file_exists(child):
                     log.trace("New file:", directory)
                     self.sync.add(child)
                     db.update_status(child, db.Status.queued)
+                    count += 1
+
+        return count
 
     def _add_sync_database(self):
         """ Load all local items from database and add to 
@@ -192,7 +197,8 @@ class PyGDClient:
             log.say("Checking for new files.")
             # recursively check the local files
             self.build_local_tree()
-            self._add_sync_recursive(self.local_root)
+            n = self._add_sync_recursive(self.local_root)
+            log.say(n, "new local files found.")
 
             # add database items to queue
             self._add_sync_database()
