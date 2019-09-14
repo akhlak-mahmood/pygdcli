@@ -128,11 +128,12 @@ class Sync:
                     else:
                         self._sync_queue.append((Task.nochange, item, Qmirror))
             else:
-                # new file or directory
-                if item.is_file():
-                    self._sync_queue.append((Task.load, item, None))
-                else:
-                    self._sync_queue.append((Task.create, item, None))
+                if not item.trashed:
+                    # new file or directory
+                    if item.is_file():
+                        self._sync_queue.append((Task.load, item, None))
+                    else:
+                        self._sync_queue.append((Task.create, item, None))
 
     def _execute(self):
         """ Run the set task for the queue items. """

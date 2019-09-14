@@ -4,7 +4,7 @@ import dateutil
 UPLOAD_CHUNK_SIZE = 1024*1024
 WRITE_CHUNK_SIZE = 131072
 
-FIELDS = "id,size,name,mimeType,modifiedTime,parents,md5Checksum"
+FIELDS = "id,size,name,mimeType,modifiedTime,parents,md5Checksum,trashed"
 LSFIELDS = "nextPageToken, files(%s)" %FIELDS
 CHFIELDS = "nextPageToken,newStartPageToken,changes/file(%s)" %FIELDS
 
