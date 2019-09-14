@@ -215,11 +215,10 @@ class Sync:
         log.say("Finished Sync.")
 
     def _sync_files(self, item, mirror):
-        """ Sync the item with it's mirror file. 
-            Do extensive checking to modified time to determine sync direction.
-            If modification detected in both local and remote, abort syncing. """
+        """ Sync the item with it's mirror file. """
         log.trace("Syncing:", item, " ==> ", mirror)
 
+        # syncing means file must exist in DB
         dbItem = db.get_file_as_db(item)
 
         # current file modification time is later than
