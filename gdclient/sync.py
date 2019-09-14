@@ -59,8 +59,8 @@ class Sync:
                 for ignore in self.settings.ignore_paths:
                     if fnmatch.fnmatch(item.name, ignore) or fnmatch.fnmatch(item.path, ignore):
                         log.say("Ignore: ", item)
-                    else:
-                        self._check_queue.append(item)
+                        return
+                self._check_queue.append(item)
         else:
             log.trace("Already in queue:", item)
 
