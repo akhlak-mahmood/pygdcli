@@ -177,8 +177,7 @@ class PyGDClient:
         """ Fetch the remote changes and add to sync 
             queue for processing. """
 
-        log.say("Querying remote changes with last change token: ",
-                self.settings.get('lastChangeToken'))
+        log.say("Querying remote changes.")
         count = 0
         dG = GDChanges(db.getChangeToken())
         for remote_change in dG.fetch():
