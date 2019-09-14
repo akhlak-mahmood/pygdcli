@@ -131,7 +131,7 @@ class PyGDClient:
         if not directory.is_dir():
             raise NotADirectoryError(directory)
 
-        log.trace("Scanning ", directory.path)
+        log.progressdot("Scanning ", directory.path)
 
         if not db.file_exists(directory):
             log.trace("New directory:", directory)
@@ -160,6 +160,7 @@ class PyGDClient:
         count = 0
         for item in db.get_all_local():
             dbFile = db.get_file_as_db(item)
+            log.progressdot(dbFile.path)
             if item.exists:
                 if not item.same_file(dbFile):
                     log.trace("Change found:", item)

@@ -145,7 +145,7 @@ class LinuxFS(FileSystem):
         while response is None:
             status, response = file.next_chunk()
             if status:
-                log.trace("Uploaded %d%%" % int(status.progress() * 100))
+                log.progress("Uploaded %d%%" % int(status.progress() * 100))
 
         if file:
             # record sync time
@@ -196,7 +196,7 @@ class LinuxFS(FileSystem):
         while response is None:
             status, response = file.next_chunk()
             if status:
-                log.trace("Uploaded %d%%" % int(status.progress() * 100))
+                log.progress("Uploaded %d%%" % int(status.progress() * 100))
 
         if file:
             # update the remote file properties with the response json

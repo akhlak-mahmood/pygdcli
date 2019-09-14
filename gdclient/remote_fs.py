@@ -274,7 +274,7 @@ class GDriveFS(FileSystem):
             done = False
             while done is False:
                 status, done = downloader.next_chunk()
-                log.trace("Downloaded %d%%." % int(status.progress() * 100))
+                log.progress("Downloaded %d%%." % int(status.progress() * 100))
 
             return fh
 

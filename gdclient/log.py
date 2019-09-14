@@ -13,7 +13,7 @@ _output = None
 _max_level = None
 _format = None
 _log_errors = True
-_progress = False
+_progress = 0
 _loggable_levels = []
 _levels = [DEBUG, INFO, WARNING, ERROR, CRITICAL]
 
@@ -144,9 +144,18 @@ def critical(*text):
 
 def progress(*text):
     global _output, _progress
-    _output.write('\r{0: <120}'.format(_formatted(*text)))
+    _output.write('{0: <40}\r'.format(_formatted(*text)))
     _output.flush()
     _progress = True
+
+def progressdot(*text):
+    global _output, _progress
+    if _progress > 30:
+        _output.write("\r{0: <32}\r".format("=>"))
+        _progress = 1
+    _output.write("\b=>")
+    _output.flush()
+    _progress += 1
 
 if _max_level == None:
     set_max_level(INFO)
