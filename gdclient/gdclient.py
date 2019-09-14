@@ -185,7 +185,7 @@ class PyGDClient:
         for remote_change in dG.fetch():
             self.sync.add(remote_change)
             count += 1
-        log.say("%d remote file changes found." % count)
+        log.say("%d remote file changes reported." % count)
         self.settings.lastChangeToken = dG.last_poll_token()
 
     def run(self, full_scan=False):
