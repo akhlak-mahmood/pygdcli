@@ -21,7 +21,7 @@ class AttrDict(dict):
         # key can't start with a digit, must be alphanumeric
         # unscore allowed
         return bool(search(strg))
-    
+
     def __setitem__(self, key, value):
         # do not allow any key from dict's namespace
         if key in dir({}):
@@ -62,10 +62,12 @@ def save_dict(d, json_file, compressed=False):
         else:
             json.dump(d, fp, indent=4)
 
+
 def load_dict(json_file):
     with open(json_file, 'r') as fp:
         d = json.load(fp)
     return d
+
 
 def interactive(handler=None):
     import os
@@ -112,6 +114,7 @@ def interactive(handler=None):
             traceback.print_exc(file=sys.stdout)
             print()
 
+
 def _do_cmp(f1, f2):
     bufsize = 1048576
     if os.path.getsize(f1) != os.path.getsize(f2):
@@ -124,4 +127,3 @@ def _do_cmp(f1, f2):
                 return False
             if not b1:
                 return True
-

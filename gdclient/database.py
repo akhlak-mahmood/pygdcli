@@ -237,7 +237,7 @@ def file_exists(item):
 def resolve_path(item):
     """ Resolves the path of the file object from database.
         Raises ErrorPathResolve. """
-    
+
     # convert to record object to resolve remote path
     recObj = _record_object_from_file(item)
     return _file_object_from_record(recObj)
@@ -247,13 +247,14 @@ def get_file_as_db(item):
     """ Return a file object with all the info as saved in database
             None if not found. """
 
-    fstype = FileType.LinuxFS if isinstance(item, LinuxFS) else FileType.DriveFS
+    fstype = FileType.LinuxFS if isinstance(
+        item, LinuxFS) else FileType.DriveFS
     results = Record.select().where(
-                    (Record.path == item.path) &
-                    (Record.is_dir == item.is_dir()) &
-                    (Record.fstype == fstype) &
-                    (Record.deleted == False)
-            )
+        (Record.path == item.path) &
+        (Record.is_dir == item.is_dir()) &
+        (Record.fstype == fstype) &
+        (Record.deleted == False)
+    )
 
     if results.count() > 0:
         result = results[0]
@@ -275,11 +276,11 @@ def get_file_as_db(item):
     if result.fstype == FileType.DriveFS and not dbFile.parentIds:
         parent_path = os.path.dirname(dbFile.path)
         results = Record.select().where(
-                    (Record.path == parent_path) &
-                    (Record.is_dir == True) &
-                    (Record.fstype == FileType.DriveFS) &
-                    (Record.deleted == False)
-                )
+            (Record.path == parent_path) &
+            (Record.is_dir == True) &
+            (Record.fstype == FileType.DriveFS) &
+            (Record.deleted == False)
+        )
         if results.count() > 0:
             dbFile.parentIds = [p.id_str for p in results]
     return dbFile
@@ -344,7 +345,8 @@ def get_mirror(item):
 
     mirror = calculate_mirror(item)
 
-    fstype = FileType.LinuxFS if isinstance(mirror, LinuxFS) else FileType.DriveFS
+    fstype = FileType.LinuxFS if isinstance(
+        mirror, LinuxFS) else FileType.DriveFS
     results = Record.select().where(
         (Record.path == mirror.path) &
         (Record.is_dir == mirror.is_dir()) &

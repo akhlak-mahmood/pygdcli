@@ -1,35 +1,46 @@
 class ErrorNotFileSystemObject(TypeError):
     pass
 
+
 class ErrorNotDriveFSObject(ErrorNotFileSystemObject):
-    pass 
+    pass
+
 
 class ErrorNotLinuxFSObject(ErrorNotFileSystemObject):
     pass
 
+
 class ErrorPathResolve(ValueError):
     pass
+
 
 class ErrorTimeInvalid(ValueError):
     pass
 
+
 class ErrorDirectionDetection(RuntimeError):
-    pass 
+    pass
+
 
 class ErrorPathNotExists(FileExistsError):
-    pass 
+    pass
+
 
 class ErrorParseResponseObject(RuntimeError):
-    pass 
+    pass
+
 
 class ErrorIDNotSet(ValueError):
     pass
 
+
 class ErrorNameNotSet(ValueError):
-    pass 
+    pass
+
 
 class ErrorNotInDatabase(FileNotFoundError):
-    pass 
+    pass
+
 
 class ErrorParentNotFound(ErrorPathResolve):
-    pass 
+    pass

@@ -5,8 +5,9 @@ UPLOAD_CHUNK_SIZE = 1024*1024
 WRITE_CHUNK_SIZE = 131072
 
 FIELDS = "id,size,name,mimeType,modifiedTime,parents,md5Checksum,trashed"
-LSFIELDS = "nextPageToken, files(%s)" %FIELDS
-CHFIELDS = "nextPageToken,newStartPageToken,changes/file(%s)" %FIELDS
+LSFIELDS = "nextPageToken, files(%s)" % FIELDS
+CHFIELDS = "nextPageToken,newStartPageToken,changes/file(%s)" % FIELDS
+
 
 class MimeTypes:
     linux_directory = 'inode/directory'
@@ -35,7 +36,8 @@ class FileSystem:
     def is_dir(self):
         if self._is_dir is None:
             # self._is_dir must be set for each item explicitely
-            raise ValueError("Object type information (file or directory) not set.")
+            raise ValueError(
+                "Object type information (file or directory) not set.")
         return self._is_dir
 
     def is_file(self):
@@ -49,7 +51,7 @@ class FileSystem:
 
     def is_remote(self):
         if self.is_local() is None:
-            return None 
+            return None
         else:
             return not self.is_local()
 
@@ -95,7 +97,8 @@ class FileSystem:
             modifiedTime = None
             if child.modifiedTime():
                 modifiedTime = child.modifiedTime().strftime("%Y-%m-%d %H:%M:%S.%f+00:00 (UTC)")
-            print("%d   %s \t %s \t\t %s \t %s" %(i+1, child.is_dir(), child.name, child.md5(), modifiedTime))
+            print("%d   %s \t %s \t\t %s \t %s" %
+                  (i+1, child.is_dir(), child.name, child.md5(), modifiedTime))
 
     def same_file(self, mirror):
         """ Compare a file with it's mirror file. """
@@ -116,7 +119,7 @@ class FileSystem:
         if self.md5() != mirror.md5():
             return False
 
-        #@todo: add byte by byte comparison option if md5 not available
+        # @todo: add byte by byte comparison option if md5 not available
 
         return True
 
@@ -128,4 +131,3 @@ class FileSystem:
 
     def remove(self):
         raise NotImplementedError()
-

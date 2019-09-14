@@ -10,6 +10,7 @@ from . import log, auth, local_fs
 from .filesystem import *
 from .errors import *
 
+
 class GDriveFS(FileSystem):
     """ Google files/dirs handler class. """
 
@@ -37,7 +38,7 @@ class GDriveFS(FileSystem):
 
     def create_dir(self):
         # 1. set_name() with parent path and dir name
-        # 2. set_parent_ids() 
+        # 2. set_parent_ids()
 
         # declare this as a directory
         self._is_dir = True
@@ -53,19 +54,20 @@ class GDriveFS(FileSystem):
             raise ErrorPathResolve(self)
 
         if not self.parentIds or len(self.parentIds) == 0:
-            raise ValueError("Parent IDs not set, can not create directory.", self)
+            raise ValueError(
+                "Parent IDs not set, can not create directory.", self)
 
         # create directory file on gDrive
         body = {
-          'name': self.name,
-          'mimeType': MimeTypes.gdrive_directory,
-          'parents': self.parentIds
+            'name': self.name,
+            'mimeType': MimeTypes.gdrive_directory,
+            'parents': self.parentIds
         }
 
         response = auth.service.files().create(
-                        body = body,
-                        fields = FIELDS         # fields that will be returned in response json
-                    ).execute()
+            body=body,
+            fields=FIELDS         # fields that will be returned in response json
+        ).execute()
 
         if response:
             self.set_object(response, os.path.dirname(self.path)), None
@@ -144,7 +146,7 @@ class GDriveFS(FileSystem):
                 self.is_google_doc = False
             except:
                 # ignore, these files might be google docs
-                #@todo: process google docs
+                # @todo: process google docs
                 self.is_google_doc = True
 
     def add_parent_id(self, parent_id):
@@ -170,22 +172,24 @@ class GDriveFS(FileSystem):
             raise NotADirectoryError("Can not list, object is a file.", self)
 
         if not self.exists:
-            raise ErrorPathNotExists("Remote directory does not exist, can not list.", self)
+            raise ErrorPathNotExists(
+                "Remote directory does not exist, can not list.", self)
 
         if self.path is None:
-            raise ErrorPathResolve("Path not set, can not initialize children.", self)
+            raise ErrorPathResolve(
+                "Path not set, can not initialize children.", self)
 
         if nextPageToken:
             log.trace("List directory fetching next page: ", self.path)
             results = auth.service.files().list(
-                q="'%s' in parents and trashed = false" %self.id,
+                q="'%s' in parents and trashed = false" % self.id,
                 fields=LSFIELDS,
                 pageToken=nextPageToken,
                 pageSize=50).execute()
         else:
             log.trace("Listing directory: ", self.path)
             results = auth.service.files().list(
-                q="'%s' in parents and trashed = false" %self.id,
+                q="'%s' in parents and trashed = false" % self.id,
                 fields=LSFIELDS,
                 pageSize=50).execute()
 
@@ -244,9 +248,7 @@ class GDriveFS(FileSystem):
         self._syncTime = datetime.utcnow()
         local_file._syncTime = self._syncTime
 
-
         return True
-
 
     def download_to_memory(self):
         """ Download the file contents as bytes into memory. 
@@ -258,7 +260,8 @@ class GDriveFS(FileSystem):
             raise ValueError("ID not defined to download", self)
 
         if self.is_dir():
-            raise IsADirectoryError("Can not download directory to memory", self)
+            raise IsADirectoryError(
+                "Can not download directory to memory", self)
 
         else:
             log.say("Downloading: ", self.name, "ID: ", self.id)
@@ -274,12 +277,12 @@ class GDriveFS(FileSystem):
 
             return fh
 
-
     def download_to_parent(self, parent_object):
         """ Download current remote file to a specified local directory. """
 
         if not isinstance(parent_object, local_fs.LinuxFS):
-            raise ErrorNotLinuxFSObject("Parent object has to be a local_fs.LinuxFS object", parent_object)
+            raise ErrorNotLinuxFSObject(
+                "Parent object has to be a local_fs.LinuxFS object", parent_object)
 
         if not self.id:
             raise ErrorIDNotSet(self)
@@ -288,10 +291,11 @@ class GDriveFS(FileSystem):
             raise ErrorNameNotSet("name not set to create local file", self)
 
         if not parent_object.is_dir():
-            raise NotADirectoryError("parent object must be a directory.", parent_object)
+            raise NotADirectoryError(
+                "parent object must be a directory.", parent_object)
 
         # find target local file path
-        parent_dir = parent_object.path 
+        parent_dir = parent_object.path
         local_path = os.path.join(parent_dir, self.name)
 
         # create a new local file object
@@ -301,7 +305,6 @@ class GDriveFS(FileSystem):
         local_file._is_dir = False
 
         self.download_to_local(local_file)
-
 
     @staticmethod
     def _get_child_dir(parent, dir_name):
@@ -327,7 +330,7 @@ class GDriveFS(FileSystem):
 
         # init empty remote object
         parent = GDriveFS()
-        
+
         # path must start like 'root/path/to/dir' or '/path/to/dir'
         if paths[0] != 'root' and not gdrive_path.startswith("/"):
             raise ValueError("Invalid gdrive_path, must start with / or root/")
@@ -336,7 +339,7 @@ class GDriveFS(FileSystem):
 
         if gdrive_path == "/" or gdrive_path == "root":
             return parent
-        
+
         for dir_name in paths[1:]:
             directory = GDriveFS._get_child_dir(parent, dir_name)
 
@@ -368,18 +371,16 @@ class GDriveFS(FileSystem):
         log.trace("Removing", self)
         try:
             # trash/delete is recursive
-            #@todo: if directory, recursively remove children from DB as well
+            # @todo: if directory, recursively remove children from DB as well
             updated_file = auth.service.files().update(fileId=self.id,
-                                    body={'trashed': True},
-                                    fields=FIELDS
-                                ).execute()
+                                                       body={'trashed': True},
+                                                       fields=FIELDS
+                                                       ).execute()
         except Exception as ex:
             log.error(ex)
         else:
             self.set_object(updated_file, None)
             log.say("Trash OK:", self)
-
-
 
 
 class GDChanges:
@@ -398,12 +399,13 @@ class GDChanges:
 
         while page_token is not None:
             response = auth.service.changes().list(
-                            pageToken=page_token,
-                            spaces='drive',
-                            fields=CHFIELDS
-                ).execute()
+                pageToken=page_token,
+                spaces='drive',
+                fields=CHFIELDS
+            ).execute()
             for change in response.get('changes'):
-                log.say('Change found for file: %s' % change.get('file').get('name'))
+                log.say('Change found for file: %s' %
+                        change.get('file').get('name'))
                 item = GDriveFS()
 
                 # setting parent as None, which needs to be resolved

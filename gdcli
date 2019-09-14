@@ -17,20 +17,20 @@ except:
     raise
 
 try:
-	import peewee
+    import peewee
 except:
     print("Failed to import peewee library.")
     print("Please check the dependencies list.")
     raise
 
 from gdclient.gdclient import PyGDClient
-from gdclient import log 
+from gdclient import log
 
 parser = argparse.ArgumentParser(description='Python GDrive CLI')
 parser.add_argument('settings', type=str, help='path to settings.json')
 parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
 parser.add_argument('-f', '--full', dest='full', action='store_true',
-            help='run full recursive scan')
+                    help='run full recursive scan')
 
 args = parser.parse_args()
 

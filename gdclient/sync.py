@@ -1,21 +1,23 @@
 import os
 
-from . import log 
+from . import log
 from . import auth
-from . import database as db 
+from . import database as db
 
 from .errors import *
 from .filesystem import FileSystem
 from .local_fs import LinuxFS
 from .remote_fs import GDriveFS
 
+
 class Task:
-    nochange    = 0
-    create      = 1
-    load        = 2
-    update      = 3
-    delete      = 4
-    conflict    = 5
+    nochange = 0
+    create = 1
+    load = 2
+    update = 3
+    delete = 4
+    conflict = 5
+
 
 class Sync:
     def __init__(self, scopes, credentials_file, token_file):
@@ -42,8 +44,8 @@ class Sync:
             log.trace("Already logged in to remote.")
 
     def __repr__(self):
-        return  "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
-        
+        return "SyncQ items: \n" + "\n".join([str(i) for i in self._sync_queue])
+
     def add(self, item):
         """ Add an item to sync queue for checking """
 
@@ -65,7 +67,8 @@ class Sync:
             mirror = db.calculate_mirror(item)
         except ErrorPathResolve:
             return None
-        qmirrors = [x for x in self._check_queue if all([x.path == mirror.path, x.__class__ == mirror.__class__])]
+        qmirrors = [x for x in self._check_queue if all(
+            [x.path == mirror.path, x.__class__ == mirror.__class__])]
         Qmirror = qmirrors[0] if len(qmirrors) else None
         try:
             # remove mirror from queue to avoid double handling
@@ -98,9 +101,11 @@ class Sync:
                     else:
                         # different changes in local and mirror
                         if item.is_file():
-                            self._sync_queue.append((Task.conflict, item, Qmirror))
+                            self._sync_queue.append(
+                                (Task.conflict, item, Qmirror))
                         else:
-                            self._sync_queue.append((Task.nochange, item, Qmirror))
+                            self._sync_queue.append(
+                                (Task.nochange, item, Qmirror))
                 else:
                     # delete in either local or remote
                     if item.trashed:
@@ -193,7 +198,6 @@ class Sync:
                 # no change
                 db.update(item)
                 db.update(Qmirror)
-
 
     def run(self):
         """ Process sync queue """

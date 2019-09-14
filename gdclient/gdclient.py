@@ -1,12 +1,12 @@
 import os
 import sys
-from pathlib import Path 
+from pathlib import Path
 
 from . import log
 from . import utils
 from . import sync
 from . import filesystem
-from . import database as db 
+from . import database as db
 
 from .errors import *
 from .local_fs import LinuxFS
@@ -14,11 +14,12 @@ from .remote_fs import GDriveFS, GDChanges
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
+
 class PyGDClient:
     def __init__(self, settings_file):
         self.settings_file = settings_file
         self.settings = None
-        self.local_root = None 
+        self.local_root = None
         self.remote_root = None
 
         # read the settings file
@@ -30,13 +31,13 @@ class PyGDClient:
 
         # connect database, setup tables if needed
         db.connect(self.settings.db_file,
-                    self.settings.remote_root_path,
-                    self.settings.local_root_path)
+                   self.settings.remote_root_path,
+                   self.settings.local_root_path)
 
         # connect remote server, login
         self.sync = sync.Sync(SCOPES,
-                        self.settings.credentials_file,
-                        self.settings.token_pickle)
+                              self.settings.credentials_file,
+                              self.settings.token_pickle)
 
     def read_settings(self):
         self.settings = utils.AttrDict()
@@ -92,8 +93,10 @@ class PyGDClient:
         """ Recursively build tree of remote sync directory. """
 
         if not 'remote_root_id' in self.settings:
-            log.say("Resolving remote root path ", self.settings.remote_root_path)
-            self.remote_root = GDriveFS.remote_path_object(self.settings.remote_root_path)
+            log.say("Resolving remote root path ",
+                    self.settings.remote_root_path)
+            self.remote_root = GDriveFS.remote_path_object(
+                self.settings.remote_root_path)
             if self.remote_root:
                 self.settings.remote_root_id = self.remote_root.id
                 self.settings.save(self.settings_file)
@@ -102,7 +105,8 @@ class PyGDClient:
                 exit(1)
         else:
             self.remote_root = GDriveFS()
-            self.remote_root.set_path_id(self.settings.remote_root_path, self.settings.remote_root_id, True)
+            self.remote_root.set_path_id(
+                self.settings.remote_root_path, self.settings.remote_root_id, True)
 
         # recursively query remote directory file list
         self.remote_root.list_dir(recursive=True)
@@ -161,20 +165,20 @@ class PyGDClient:
                 self.sync.add(item)
                 count += 1
 
-        log.say("%d local file changes found." %count)
+        log.say("%d local file changes found." % count)
 
     def _add_sync_remote_changes(self):
         """ Fetch the remote changes and add to sync 
             queue for processing. """
 
         log.say("Querying remote changes with last change token: ",
-                    self.settings.get('lastChangeToken'))
+                self.settings.get('lastChangeToken'))
         count = 0
         dG = GDChanges(self.settings.get('lastChangeToken'))
         for remote_change in dG.fetch():
             self.sync.add(remote_change)
             count += 1
-        log.say("%d remote file changes found." %count)
+        log.say("%d remote file changes found." % count)
         self.settings.lastChangeToken = dG.last_poll_token()
 
     def run(self, full_scan=False):

@@ -12,6 +12,7 @@ from . import log, auth, remote_fs
 from .filesystem import *
 from .errors import *
 
+
 class LinuxFS(FileSystem):
     """ A linux specific file handler.
         Can upload files to Google Drive. """
@@ -42,7 +43,6 @@ class LinuxFS(FileSystem):
         # explicitly set is_dir if specified
         if is_dir is not None:
             self._is_dir = is_dir
-
 
     def is_local(self):
         return True
@@ -119,31 +119,32 @@ class LinuxFS(FileSystem):
             raise IsADirectoryError(self)
 
         if not parentIds:
-            raise ErrorParentNotFound("Must specify parentIDs to upload file.", self)
+            raise ErrorParentNotFound(
+                "Must specify parentIDs to upload file.", self)
 
         payload = {
             'name': self.name,
             'parents': parentIds
         }
 
-        media = MediaFileUpload(self.path, 
-                mimetype = self._mimeType,
-                chunksize = UPLOAD_CHUNK_SIZE,
-                resumable = True
-            )
+        media = MediaFileUpload(self.path,
+                                mimetype=self._mimeType,
+                                chunksize=UPLOAD_CHUNK_SIZE,
+                                resumable=True
+                                )
 
         file = auth.service.files().create(
-                body = payload,
-                media_body = media,
-                fields = FIELDS         # fields that will be returned in response json
-            )
+            body=payload,
+            media_body=media,
+            fields=FIELDS         # fields that will be returned in response json
+        )
 
         response = None
 
         while response is None:
             status, response = file.next_chunk()
             if status:
-                log.say("Uploaded %d%%" %int(status.progress() * 100))
+                log.say("Uploaded %d%%" % int(status.progress() * 100))
 
         if file:
             # record sync time
@@ -176,24 +177,24 @@ class LinuxFS(FileSystem):
         }
 
         media = MediaFileUpload(
-                self.path,
-                chunksize = UPLOAD_CHUNK_SIZE,
-                resumable = True
-            )
+            self.path,
+            chunksize=UPLOAD_CHUNK_SIZE,
+            resumable=True
+        )
 
         file = auth.service.files().update(
-                fileId = remote_file.id,
-                body = payload,
-                media_body = media,
-                fields = FIELDS         # fields that will be returned in response json
-            )
+            fileId=remote_file.id,
+            body=payload,
+            media_body=media,
+            fields=FIELDS         # fields that will be returned in response json
+        )
 
         response = None
 
         while response is None:
             status, response = file.next_chunk()
             if status:
-                log.say("Uploaded %d%%" %int(status.progress() * 100))
+                log.say("Uploaded %d%%" % int(status.progress() * 100))
 
         if file:
             # update the remote file properties with the response json

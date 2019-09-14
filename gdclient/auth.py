@@ -6,9 +6,10 @@ from google.auth.transport.requests import Request
 
 from . import log
 
-service = None 
+service = None
 _token_pickle = None
 _scopes = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+
 
 def set_scopes(scope_items):
     global _scopes, _token_pickle
@@ -19,6 +20,7 @@ def set_scopes(scope_items):
         _scopes = scope_items
     log.trace("Set scopes ", _scopes)
 
+
 def update_scopes(scope_items, _token_pickle):
     set_scopes(scope_items)
     # if scope is changed, re-authentication needed
@@ -26,13 +28,14 @@ def update_scopes(scope_items, _token_pickle):
         os.remove(_token_pickle)
         log.trace("Remove ", _token_pickle)
 
+
 def authenticate(credentials_file, _token_pickle):
     global _scopes, service
 
     if len(_scopes) == 0:
         raise ValueError("Scopes not set, please set scopes first")
 
-    creds = None 
+    creds = None
     if os.path.exists(_token_pickle):
         with open(_token_pickle, 'rb') as token:
             creds = pickle.load(token)
@@ -88,5 +91,3 @@ def authenticate(credentials_file, _token_pickle):
         raise
     else:
         log.trace("API service build OK")
-
-
