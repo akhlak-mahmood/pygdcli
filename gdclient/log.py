@@ -13,6 +13,7 @@ _output = None
 _max_level = None
 _format = None
 _log_errors = True
+_progress = False
 _loggable_levels = []
 _levels = [DEBUG, INFO, WARNING, ERROR, CRITICAL]
 
@@ -82,8 +83,11 @@ def set_format(format):
 
 
 def _log(log_level, text):
-    global _format
+    global _format, _progress
     if _above_max_level(log_level):
+        if _progress:
+            _write('')
+            _progress = False
         now = datetime.now()
         _write(_format.format(time=now.time(),
                               datetime=now,
@@ -138,6 +142,11 @@ def error(*text):
 def critical(*text):
     _log(CRITICAL, _formatted(*text))
 
+def progress(*text):
+    global _output, _progress
+    _output.write('\r{0: <120}'.format(_formatted(*text)))
+    _output.flush()
+    _progress = True
 
 if _max_level == None:
     set_max_level(INFO)
