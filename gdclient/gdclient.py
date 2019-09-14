@@ -46,7 +46,8 @@ class PyGDClient:
             try:
                 self.settings.load_json(self.settings_file)
             except:
-                log.critical("Failed to read settings file. Please make sure the json format is valid.")
+                log.critical(
+                    "Failed to read settings file. Please make sure the json format is valid.")
                 raise
         else:
             log.say("Not found ", self.settings_file)
@@ -56,13 +57,13 @@ class PyGDClient:
         # save the default token file
         if not 'token_pickle' in self.settings:
             # self.settings.token_pickle = os.path.join(os_home, '.gdcli.token.pkl')
-            self.settings.token_pickle = 'token.pickle'
+            self.settings.token_pickle = '.gdcli-token.pk'
             log.trace("Set token file: ", self.settings.token_pickle)
 
         if not 'credentials_file' in self.settings:
-            # we will move the default to os_home later
-            # self.settings.credentials_file = os.path.join(os_home, '.gdcli.credentials.json')
-            self.settings.credentials_file = 'credentials.json'
+            cred_file = os.path.join(os.path.dirname(os.path.dirname(
+                os.path.realpath(__file__))), "credentials.json")
+            self.settings.credentials_file = cred_file
             log.trace("Set credentials file: ", self.settings.credentials_file)
 
         if not 'local_root_path' in self.settings:
@@ -74,11 +75,11 @@ class PyGDClient:
             log.trace("Set remote root: ", self.settings.remote_root_path)
 
         if not 'db_file' in self.settings:
-            self.settings.db_file = 'db.sqlite'
+            self.settings.db_file = '.gdcli-db.sqlite'
             log.trace("Set database file: ", self.settings.db_file)
 
         if not 'ignore_paths' in self.settings:
-            self.settings.ignore_paths = []
+            self.settings.ignore_paths = [".gdcli*"]
 
         # save the default settings
         self.settings.save(self.settings_file)
