@@ -51,7 +51,7 @@ class Sync:
         # if type and id not in queue, id is set to path for local files
         if not any(x for x in self._check_queue if all([x.id == item.id, x.__class__ == item.__class__])):
             for ignore in self.settings.ignore_paths:
-                if fnmatch.fnmatch(item.name, ignore) or fnmatch.fnmatch(item.path, ignore):
+                if fnmatch.fnmatch(item.name, ignore) or (item.path and fnmatch.fnmatch(item.path, ignore)):
                     log.say("Ignore: ", item)
                     return
             self._check_queue.append(item)
