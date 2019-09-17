@@ -50,17 +50,11 @@ class Sync:
 
         # if type and id not in queue, id is set to path for local files
         if not any(x for x in self._check_queue if all([x.id == item.id, x.__class__ == item.__class__])):
-            try:
-                item = db.resolve_path(item)
-            except:
-                # if path not resolved, file not within our directory, ignore
-                log.trace("Failed to resolve path from DB: ", item)
-            else:
-                for ignore in self.settings.ignore_paths:
-                    if fnmatch.fnmatch(item.name, ignore) or fnmatch.fnmatch(item.path, ignore):
-                        log.say("Ignore: ", item)
-                        return
-                self._check_queue.append(item)
+            for ignore in self.settings.ignore_paths:
+                if fnmatch.fnmatch(item.name, ignore) or fnmatch.fnmatch(item.path, ignore):
+                    log.say("Ignore: ", item)
+                    return
+            self._check_queue.append(item)
         else:
             log.trace("Already in queue:", item)
 
@@ -85,6 +79,13 @@ class Sync:
     def _check_queue_items(self, item):
         """ Check an item for update, creation etc and set to
             corresponding task queue. """
+
+        try:
+            item = db.resolve_path(item)
+        except:
+            # if path not resolved, file not within our directory, ignore
+            log.trace("Failed to resolve path from DB: ", item)
+
         if db.file_exists(item):
             # change, no change, delete
             dbFile = db.get_file_as_db(item)
@@ -153,6 +154,13 @@ class Sync:
             task, item, Qmirror = self._sync_queue.pop(0)
 
             log.trace("Processing", task, item)
+
+            try:
+                item = db.resolve_path(item)
+            except:
+                # if path not resolved, file not within our directory, ignore
+                log.trace("Failed to resolve path from DB: ", item)
+                continue
 
             if task == Task.create:
                 try:
