@@ -225,7 +225,7 @@ class Sync:
 
         if len(self._sync_queue):
             print(self)
-            input("Press Enter to execute the following changes: ")
+            input("Press Enter to execute the above changes: ")
             self.login()
             self._execute()
         else:
