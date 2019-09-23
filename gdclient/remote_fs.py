@@ -264,7 +264,7 @@ class GDriveFS(FileSystem):
                 "Can not download directory to memory", self)
 
         else:
-            log.say("Downloading: ", self.name, "ID: ", self.id)
+            log.trace("Downloading: ", self.name, "ID: ", self.id)
             request = auth.service.files().get_media(fileId=self.id)
 
             fh = io.BytesIO()
