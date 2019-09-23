@@ -69,17 +69,6 @@ class PyGDClient:
         if not 'local_root_path' in self.settings:
             self.settings.local_root_path = os.getcwd()
             log.trace("Set local root: ", self.settings.local_root_path)
-        else:
-            # create local root path
-            if not os.path.isdir(self.settings.local_root_path):
-                try:
-                    os.makedirs(self.settings.local_root_path)
-                except:
-                    log.critical(
-                        "Failed to create local sync directory.", self.settings.local_root_path)
-                    raise
-                else:
-                    log.say("Local sync directory created.", self.settings.local_root_path)
 
         if not 'remote_root_path' in self.settings:
             self.settings.remote_root_path = '/'
@@ -103,8 +92,11 @@ class PyGDClient:
         """ Recursively build tree of local sync directory. """
 
         self.local_root = LinuxFS(self.settings.local_root_path, True)
-        self.local_root.list_dir(recursive=True)
-        # self.local_root.print_children()
+        if not self.local_root.exists or not self.local_root.is_dir():
+            self.local_root.create_dir()
+        else:
+            self.local_root.list_dir(recursive=True)
+            # self.local_root.print_children()
 
     def build_remote_tree(self):
         """ Recursively build tree of remote sync directory. """
