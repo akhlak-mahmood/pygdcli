@@ -46,4 +46,3 @@ Intial sync may take some time depending the number of files you have. The app d
 
 # License
 GNU General Public License v3.0 (c) Akhlak Mahmood 2019
-Please see the included LICENSE file for details.
