@@ -12,12 +12,12 @@ from .remote_fs import GDriveFS
 
 
 class Task:
-    nochange = 0
-    create = 1
-    load = 2
-    update = 3
-    delete = 4
-    conflict = 5
+    nochange    = 'no change'
+    create      = 'CREATE'
+    load        = 'UP/DOWNLOAD'
+    update      = 'UPDATE'
+    delete      = 'DELETE'
+    conflict    = 'CONFLICT'
 
 
 class Sync:
@@ -225,7 +225,7 @@ class Sync:
 
         if len(self._sync_queue):
             print(self)
-            input("Press Enter to execute changes: ")
+            input("Press Enter to execute the following changes: ")
             self.login()
             self._execute()
         else:
