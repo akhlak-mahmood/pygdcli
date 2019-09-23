@@ -21,7 +21,7 @@ cd ~/GDrive
 ```
 This will create a **settings.json** file.
 
-- Next, edit the **settings.json** file specifying your desired Google Drive sync directory. Please make sure the json format is correct.
+- Next, edit the **settings.json** file specifying your desired Google Drive sync directory. Please make sure the json format is correct. (There should not be any comma after the last item.)
 For example,
 ```json
 {
@@ -42,9 +42,9 @@ For example,
 - You will be asked to review and confirm the detected changes before they are executed. Files outside your sync directory will still be reported by Google Drive API as changes, they will be ignored accordingly.
 
 # Features
-- You can sync multiple folders by using different **settings.json** with different root_paths and db_file.
-- You can use multiple google accounts by specifying different token_pickle paths.
-- You can specify a list of glob patterns to ignore certain files during sync. Example:
+- You can sync multiple folders by using different **settings.json** with different `root_paths` and `db_file`.
+- You can use multiple google accounts by specifying different `token_pickle` paths.
+- You can specify a list of glob patterns as `ignore_paths` to ignore certain files during sync. Example:
 ```json
     "ignore_paths": [
         "*.pk",
