@@ -53,10 +53,12 @@ For example,
 
 # Limitations
 - Initial sync may take some time depending on the number of files you have and their size.
-- The app does not watch file changes, so you have to run the it each time you need to sync.
+- The app does not watch file changes, so you have to run it each time you need to sync.
 - Files are downloaded to memory first, so files with size greater than your RAM size will fail to download.
+- No differential sync supported, whole file will be uploaded/download during sync.
 
 # Dependencies
+Python libraries:
 - pytz
 - python-dateutil
 - google-api-python-client
