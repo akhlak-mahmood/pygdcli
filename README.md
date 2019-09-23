@@ -1,7 +1,8 @@
 # PYGDCLI
 Python CLI client to selectively sync Google Drive directories from Ubuntu terminal.
+
 # Installation
-- Clone this git repo
+- Clone this git repository.
 ```bash
 git clone https://github.com/akhlak-mahmood/pygdcli.git ~/pygdcli
 ```
@@ -18,9 +19,10 @@ cd ~/GDrive
 ```bash
 ~/pygdcli/gdcli settings.json
 ```
-This will create a *settings.json* file.
+This will create a **settings.json** file.
 
-- Next edit the settings file specifying your desired Google Drive sync directory. For example,
+- Next, edit the **settings.json** file specifying your desired Google Drive sync directory. Please make sure the json format is correct.
+For example,
 ```json
 {
 "local_root_path": "Photos",
@@ -29,22 +31,30 @@ This will create a *settings.json* file.
 "db_file": "db-photos.sqlite"
 }
 ```
-- Run the client again
+- Run the client again.
 ```bash
 ~/pygdcli/gdcli settings.json
 ```
- A new browser window should open to authenticate the app and grant permissions to access your Drive files.
+ A new browser window will open up to authenticate the app and grant permissions to access your Drive files. Review the permissions.
 
- *Please note that, the app has not been verified by Google yet, so you will have to choose to continue with the "unsafe" option during authetication.*
+ *Please note that, the app has not been verified by Google yet, so you will have to choose to continue with the "unsafe" option during authentication.*
 
 # Features
 - You can sync multiple folders by specifying different root_paths and db_file.
 - You can use multiple google accounts by specifying different token_pickle paths.
+- You can specify a list of glob patterns to ignore files during sync. Example:
+```json
+    "ignore_paths": [
+        "*.pk",
+        ".~*",
+        "*.ipynb_*"
+    ]
+```
 
 # Limitations
-- Intial sync may take some time depending on the number of files you have.
-- The app does not watch file changes, so run the client each time you need to sync.
-- Files are downloaded to memory first, so file greater than your RAM size will fail to download.
+- Initial sync may take some time depending on the number of files you have and their size.
+- The app does not watch file changes, so you have to run the it each time you need to sync.
+- Files are downloaded to memory first, so files with size greater than your RAM size will fail to download.
 
 # Dependencies
 - pytz
