@@ -39,6 +39,8 @@ For example,
 
  *Please note that, the app has not been verified by Google yet, so you will have to choose to continue with the "unsafe" option during authentication.*
 
+- You will be asked to review and confirm the detected changes before they are executed.
+
 # Features
 - You can sync multiple folders by specifying different root_paths and db_file.
 - You can use multiple google accounts by specifying different token_pickle paths.
@@ -52,10 +54,9 @@ For example,
 ```
 
 # Limitations
-- Initial sync may take some time depending on the number of files you have and their size.
-- The app does not watch file changes, so you have to run it each time you need to sync.
-- Files are downloaded to memory first, so files with size greater than your RAM size will fail to download.
-- No differential sync supported, whole file will be uploaded/download during sync.
+- The client does not watch file changes, so you have to run it each time you need to sync.
+- Files are downloaded to memory first, so files with size greater than your available memory will fail to download.
+- No differential sync supported, whole file will be uploaded/downloaded during the sync.
 
 # Dependencies
 Python libraries:
