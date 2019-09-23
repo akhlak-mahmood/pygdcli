@@ -39,12 +39,12 @@ For example,
 
  *Please note that, the app has not been verified by Google yet, so you will have to choose to continue with the "unsafe" option during authentication.*
 
-- You will be asked to review and confirm the detected changes before they are executed.
+- You will be asked to review and confirm the detected changes before they are executed. Files outside your sync directory will still be reported by Google Drive API as changes, they will be ignored accordingly.
 
 # Features
-- You can sync multiple folders by specifying different root_paths and db_file.
+- You can sync multiple folders by using different **settings.json** with different root_paths and db_file.
 - You can use multiple google accounts by specifying different token_pickle paths.
-- You can specify a list of glob patterns to ignore files during sync. Example:
+- You can specify a list of glob patterns to ignore certain files during sync. Example:
 ```json
     "ignore_paths": [
         "*.pk",
@@ -56,7 +56,7 @@ For example,
 # Limitations
 - The client does not watch file changes, so you have to run it each time you need to sync.
 - Files are downloaded to memory first, so files with size greater than your available memory will fail to download.
-- No differential sync supported, whole file will be uploaded/downloaded during the sync.
+- No differential sync supported, whole file will be uploaded/downloaded during sync.
 
 # Dependencies
 Python libraries:
