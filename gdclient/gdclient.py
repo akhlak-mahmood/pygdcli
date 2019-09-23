@@ -69,6 +69,17 @@ class PyGDClient:
         if not 'local_root_path' in self.settings:
             self.settings.local_root_path = os.getcwd()
             log.trace("Set local root: ", self.settings.local_root_path)
+        else:
+            # create local root path
+            if not os.path.isdir(self.settings.local_root_path):
+                try:
+                    os.makedirs(self.settings.local_root_path)
+                except:
+                    log.critical(
+                        "Failed to create local sync directory.", self.settings.local_root_path)
+                    raise
+                else:
+                    log.say("Local sync directory created.", self.settings.local_root_path)
 
         if not 'remote_root_path' in self.settings:
             self.settings.remote_root_path = '/'
